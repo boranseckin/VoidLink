@@ -35,7 +35,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(simple-lora simple-lora.c )
+add_executable(simple-lora simple-lora.c)
 
 pico_set_program_name(simple-lora "simple-lora")
 pico_set_program_version(simple-lora "0.1")
@@ -44,19 +44,44 @@ pico_set_program_version(simple-lora "0.1")
 pico_enable_stdio_uart(simple-lora 1)
 pico_enable_stdio_usb(simple-lora 0)
 
-# Add the standard library to the build
-target_link_libraries(simple-lora
-        pico_stdlib)
-
 # Add the standard include files to the build
 target_include_directories(simple-lora PRIVATE
-  ${CMAKE_CURRENT_LIST_DIR}
+    ${CMAKE_CURRENT_LIST_DIR}
 )
 
-# Add any user requested libraries
-target_link_libraries(simple-lora 
-        hardware_spi
-        )
+set(SX126X_PATH ${CMAKE_CURRENT_LIST_DIR}/lib/SWSD003/sx126x/sx126x_driver)
+
+add_library(sx126x INTERFACE)
+
+target_sources(sx126x INTERFACE
+    ${SX126X_PATH}/src/lr_fhss_mac.c
+    ${SX126X_PATH}/src/lr_fhss_mac.h
+    ${SX126X_PATH}/src/lr_fhss_v1_base_types.h
+    ${SX126X_PATH}/src/sx126x_driver_version.c
+    ${SX126X_PATH}/src/sx126x_driver_version.h
+    ${SX126X_PATH}/src/sx126x_hal.h
+    ${SX126X_PATH}/src/sx126x_lr_fhss.c
+    ${SX126X_PATH}/src/sx126x_lr_fhss.h
+    ${SX126X_PATH}/src/sx126x_regs.h
+    ${SX126X_PATH}/src/sx126x.c
+    ${SX126X_PATH}/src/sx126x.h
+
+    ${CMAKE_CURRENT_LIST_DIR}/src/pico_config.h
+    ${CMAKE_CURRENT_LIST_DIR}/src/pico_gpio.h
+    ${CMAKE_CURRENT_LIST_DIR}/src/pico_gpio.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/pico_spi.h
+    ${CMAKE_CURRENT_LIST_DIR}/src/pico_spi.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/sx126x_hal_context.h
+    ${CMAKE_CURRENT_LIST_DIR}/src/sx126x_hal.c
+)
+
+target_include_directories(sx126x INTERFACE
+    ${SX126X_PATH}/src
+
+    ${CMAKE_CURRENT_LIST_DIR}/src/
+)
+
+target_link_libraries(simple-lora pico_stdlib hardware_spi sx126x)
 
 pico_add_extra_outputs(simple-lora)
 
