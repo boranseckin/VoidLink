@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "pico_spi.h"
 
 spi_t pico_spi_init(spi_inst_t *inst, uint8_t miso, uint8_t mosi, uint8_t sclk, uint8_t nss) {
@@ -19,5 +21,6 @@ spi_t pico_spi_init(spi_inst_t *inst, uint8_t miso, uint8_t mosi, uint8_t sclk, 
 
 void pico_spi_in_out(spi_inst_t *spi, const uint8_t *out, uint8_t *in, size_t len) {
   uint8_t dummy_buf[len];
+  memset(dummy_buf, 0, len);
   spi_write_read_blocking(spi, (out != NULL) ? out : dummy_buf, (in != NULL) ? in : dummy_buf, len);
 }
