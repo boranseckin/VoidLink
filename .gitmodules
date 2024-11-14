@@ -1,0 +1,3 @@
+[submodule "lib/SWSD003"]
+	path = lib/SWSD003
+	url = https://github.com/Lora-net/SWSD003.git
