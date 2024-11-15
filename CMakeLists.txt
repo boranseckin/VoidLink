@@ -28,24 +28,32 @@ set(PICO_BOARD pico CACHE STRING "Board type")
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(simple-lora C CXX ASM)
+project(simple_lora C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-# Add executable. Default name is the project name, version 0.1
+add_executable(simple_lora_tx simple_lora_tx.c)
+add_executable(simple_lora_rx simple_lora_rx.c)
 
-add_executable(simple-lora simple-lora.c)
-
-pico_set_program_name(simple-lora "simple-lora")
-pico_set_program_version(simple-lora "0.1")
+pico_set_program_name(simple_lora_tx "simple_lora_tx")
+pico_set_program_name(simple_lora_rx "simple_lora_rx")
+pico_set_program_version(simple_lora_tx "0.1")
+pico_set_program_version(simple_lora_rx "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(simple-lora 1)
-pico_enable_stdio_usb(simple-lora 0)
+pico_enable_stdio_uart(simple_lora_tx 0)
+pico_enable_stdio_usb(simple_lora_tx 1)
+
+pico_enable_stdio_uart(simple_lora_rx 0)
+pico_enable_stdio_usb(simple_lora_rx 1)
 
 # Add the standard include files to the build
-target_include_directories(simple-lora PRIVATE
+target_include_directories(simple_lora_tx PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}
+)
+
+target_include_directories(simple_lora_rx PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}
 )
 
@@ -81,7 +89,9 @@ target_include_directories(sx126x INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/src/
 )
 
-target_link_libraries(simple-lora pico_stdlib hardware_spi sx126x)
+target_link_libraries(simple_lora_tx pico_stdlib hardware_spi sx126x)
+target_link_libraries(simple_lora_rx pico_stdlib hardware_spi sx126x)
 
-pico_add_extra_outputs(simple-lora)
+pico_add_extra_outputs(simple_lora_tx)
+pico_add_extra_outputs(simple_lora_rx)
 

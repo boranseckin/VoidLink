@@ -8,18 +8,74 @@
 #include "sx126x.h"
 #include "sx126x_hal_context.h"
 
+#define PAYLOAD_BUFFER_SIZE 512
+
+static uint8_t payload_buf[PAYLOAD_BUFFER_SIZE];
+static sx126x_rx_buffer_status_t buffer_status;
+
 static sx126x_hal_context_t context;
 
 void dio1_callback(uint gpio, uint32_t events) {
   printf("IRQ: ");
+
   sx126x_irq_mask_t irq = 0;
-  sx126x_get_irq_status(&context, &irq);
-  printf("%d\n", irq);
+  sx126x_get_and_clear_irq_status(&context, &irq);
+  if (irq == SX126X_IRQ_TX_DONE) {
+    printf("TX_DONE\n");
+  } else if (irq == SX126X_IRQ_RX_DONE) {
+    printf("RX_DONE\n");
+
+    sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
+    sx126x_get_status(&context, &status);
+    if (!(status.chip_mode == SX126X_CHIP_MODE_RX &&
+          status.cmd_status == SX126X_CMD_STATUS_DATA_AVAILABLE)) {
+      printf("status error (mode: %d | cmd: %d)\n", status.chip_mode, status.cmd_status);
+      return;
+    }
+
+    sx126x_get_rx_buffer_status(&context, &buffer_status);
+    printf("payload received: %d @ %d\n", buffer_status.pld_len_in_bytes,
+           buffer_status.buffer_start_pointer);
+
+    if (buffer_status.pld_len_in_bytes > PAYLOAD_BUFFER_SIZE) {
+      printf("payload is bigger than the buffer (%d)\n", PAYLOAD_BUFFER_SIZE);
+      return;
+    }
+
+    sx126x_read_buffer(&context, buffer_status.buffer_start_pointer, payload_buf,
+                       buffer_status.pld_len_in_bytes);
+
+    printf("->");
+    for (int i = 0; i < buffer_status.pld_len_in_bytes; i++) {
+      printf(" %d", payload_buf[i]);
+    }
+    printf("\n");
+  } else if (irq == SX126X_IRQ_PREAMBLE_DETECTED) {
+    printf("PREAMBLE_DETECTED\n");
+  } else if (irq == SX126X_IRQ_SYNC_WORD_VALID) {
+    printf("SYNC_WORD_VALID\n");
+  } else if (irq == SX126X_IRQ_HEADER_VALID) {
+    printf("HEADER_VALID\n");
+  } else if (irq == SX126X_IRQ_CRC_ERROR) {
+    printf("CRC_ERROR\n");
+  } else if (irq == SX126X_IRQ_CAD_DONE) {
+    printf("CAD_ERROR\n");
+  } else if (irq == SX126X_IRQ_CAD_DETECTED) {
+    printf("CAD_DETECTED\n");
+  } else if (irq == SX126X_IRQ_TIMEOUT) {
+    printf("TIMEOUT\n");
+  } else if (irq == SX126X_IRQ_LR_FHSS_HOP) {
+    printf("LR_FHSS_HOP\n");
+  } else {
+    printf("unknown or multiple irqs\n");
+  }
 }
 
 int main() {
   sx126x_errors_mask_t errors = 0;
   sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
+
+  memset(payload_buf, 0, PAYLOAD_BUFFER_SIZE);
 
   stdio_init_all();
 
@@ -35,8 +91,7 @@ int main() {
   context.reset = pico_gpio_init(PIN_RESET, GPIO_FUNC_SIO, GPIO_DIR_OUT, GPIO_PULL_NONE, 1);
   context.dio1 = pico_gpio_init(PIN_DIO1, GPIO_FUNC_SIO, GPIO_DIR_IN, GPIO_PULL_NONE, 0);
 
-  gpio_set_irq_enabled_with_callback(context.dio1.pin, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL,
-                                     true, &dio1_callback);
+  pico_gpio_set_interrupt(context.dio1.pin, GPIO_IRQ_EDGE_RISE, &dio1_callback);
 
   gpio_init(PICO_DEFAULT_LED_PIN);
   gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
@@ -78,18 +133,6 @@ int main() {
   sx126x_set_standby(&context, SX126X_STANDBY_CFG_RC);
   sx126x_set_pkt_type(&context, SX126X_PKT_TYPE_LORA);
   sx126x_set_rf_freq(&context, 915000000);
-  sx126x_pa_cfg_params_t pa_cfg = {
-      .pa_duty_cycle = 0x04,
-      .hp_max = 0x07,
-      .device_sel = 0x00,
-      .pa_lut = 0x01,
-  };
-  sx126x_set_pa_cfg(&context, &pa_cfg);
-  sx126x_set_tx_params(&context, 0x16, SX126X_RAMP_40_US);
-
-  uint8_t data[4] = {4, 2, 3, 1};
-
-  sx126x_write_buffer(&context, 0, data, data);
 
   sx126x_mod_params_lora_t mod_params = {
       .sf = SX126X_LORA_SF7,
@@ -115,13 +158,14 @@ int main() {
   // write_reg_data = 0x44;
   // sx126x_write_register(&context, 0x0741, &write_reg_data, 1);
 
-  sx126x_set_tx(&context, 0x0);
+  // continuous receive
+  sx126x_set_rx(&context, 0xFFFFFF);
 
   sx126x_get_status(&context, &status);
   sx126x_get_device_errors(&context, &errors);
-  if (status.chip_mode == SX126X_CHIP_MODE_TX && status.cmd_status == SX126X_CMD_STATUS_RFU &&
+  if (status.chip_mode == SX126X_CHIP_MODE_RX && status.cmd_status == SX126X_CMD_STATUS_RFU &&
       errors == 0) {
-    printf("TX success\n");
+    printf("RX started\n");
   }
 
   while (true) {
