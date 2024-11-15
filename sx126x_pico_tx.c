@@ -10,8 +10,12 @@
 
 static sx126x_hal_context_t context;
 
+// Callback function for everytime an interrupt is detected on DIO1.
 void dio1_callback(uint gpio, uint32_t events) {
   printf("IRQ: ");
+
+  // Get the irq status to learn why the interrupt was triggered.
+  // And clean the interrupt at the same time, since it is getting handled now.
   sx126x_irq_mask_t irq = 0;
   sx126x_get_and_clear_irq_status(&context, &irq);
   if (irq == SX126X_IRQ_TX_DONE) {
@@ -51,22 +55,29 @@ int main() {
   sx126x_errors_mask_t errors = 0;
   sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
 
+  // Initialize the uart for printing from the pico.
   stdio_init_all();
 
+  // Wait until the usb is ready to transmit.
   while (!tud_cdc_connected()) {
     sleep_ms(100);
   }
 
+  // Initialize the SPI interface of the pico (pins defined in the src/pico_config.h).
   spi_t spi = pico_spi_init(SPI_PORT, PIN_MISO, PIN_MOSI, PIN_SCLK, PIN_NSS);
 
+  // Initialize other pins required to use the radio (pins defined in the src/pico_config.h).
+  // `context` is used throughout the code to keep track of the configuration of our setup.
   context.spi = spi;
   context.nss = pico_gpio_init(PIN_NSS, GPIO_FUNC_SIO, GPIO_DIR_OUT, GPIO_PULL_NONE, 1);
   context.busy = pico_gpio_init(PIN_BUSY, GPIO_FUNC_SIO, GPIO_DIR_IN, GPIO_PULL_NONE, 0);
   context.reset = pico_gpio_init(PIN_RESET, GPIO_FUNC_SIO, GPIO_DIR_OUT, GPIO_PULL_NONE, 1);
   context.dio1 = pico_gpio_init(PIN_DIO1, GPIO_FUNC_SIO, GPIO_DIR_IN, GPIO_PULL_NONE, 0);
 
+  // Enable the interrupts and set the callback function for DIO1 pin.
   pico_gpio_set_interrupt(context.dio1.pin, GPIO_IRQ_EDGE_RISE, &dio1_callback);
 
+  // Light up the onboard LED to signify setup is done.
   gpio_init(PICO_DEFAULT_LED_PIN);
   gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
   gpio_put(PICO_DEFAULT_LED_PIN, 1);
@@ -74,6 +85,8 @@ int main() {
   sleep_ms(1000);
   printf("Pico Lora\n");
 
+  // Try to read a register with a known reset value from the radio.
+  // If this fails, either SPI connection is not setup correctly or the radio is not responding.
   uint8_t reg = 0;
   sx126x_read_register(&context, 0x0740, &reg, 1);
   if (reg == 0x14) {
@@ -85,13 +98,17 @@ int main() {
     }
   }
 
+  // The radio is using TCXO. The DIO3 pin needs to be setup as a voltage source to the TCXO.
+  // Before this step, the radio will fail to start the XOSC, which is expected so we clear the
+  // errors.
   sx126x_clear_device_errors(&context);
-
   sx126x_set_dio3_as_tcxo_ctrl(&context, SX126X_TCXO_CTRL_1_7V, 5 << 6);
 
+  // With the TCXO correctly configured now, re-calibrate all the clock on the chip.
   sx126x_cal_mask_t calibration_mask = 0x7F;
   sx126x_cal(&context, calibration_mask);
 
+  // Make sure the calibration succeeded.
   sx126x_get_status(&context, &status);
   sx126x_get_device_errors(&context, &errors);
   if (status.chip_mode == SX126X_CHIP_MODE_STBY_RC && status.cmd_status == SX126X_CMD_STATUS_RFU &&
@@ -104,6 +121,7 @@ int main() {
     }
   }
 
+  // Setup the radio for TX
   sx126x_set_standby(&context, SX126X_STANDBY_CFG_RC);
   sx126x_set_pkt_type(&context, SX126X_PKT_TYPE_LORA);
   sx126x_set_rf_freq(&context, 915000000);

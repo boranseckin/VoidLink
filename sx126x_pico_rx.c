@@ -25,6 +25,7 @@ void dio1_callback(uint gpio, uint32_t events) {
   } else if (irq == SX126X_IRQ_RX_DONE) {
     printf("RX_DONE\n");
 
+    // Make sure the data available status is set before reading the rx buffer.
     sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
     sx126x_get_status(&context, &status);
     if (!(status.chip_mode == SX126X_CHIP_MODE_RX &&
@@ -33,15 +34,18 @@ void dio1_callback(uint gpio, uint32_t events) {
       return;
     }
 
+    // Get length and the start address of the received message.
     sx126x_get_rx_buffer_status(&context, &buffer_status);
     printf("payload received: %d @ %d\n", buffer_status.pld_len_in_bytes,
            buffer_status.buffer_start_pointer);
 
+    // Make sure the buffer has enough space to read the message.
     if (buffer_status.pld_len_in_bytes > PAYLOAD_BUFFER_SIZE) {
       printf("payload is bigger than the buffer (%d)\n", PAYLOAD_BUFFER_SIZE);
       return;
     }
 
+    // Read and print the buffer.
     sx126x_read_buffer(&context, buffer_status.buffer_start_pointer, payload_buf,
                        buffer_status.pld_len_in_bytes);
 
