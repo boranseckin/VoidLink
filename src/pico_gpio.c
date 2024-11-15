@@ -21,7 +21,7 @@ gpio_t pico_gpio_init(uint16_t pin, gpio_function_t function, gpio_direction_t d
   }
 
   if (gpio.direction == GPIO_DIR_OUT) {
-    pico_gpio_write(&gpio, value);
+    pico_gpio_write(gpio.pin, value);
   }
 
   return gpio;
