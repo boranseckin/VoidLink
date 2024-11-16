@@ -33,8 +33,8 @@ project(sx126x_pico C CXX ASM)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-add_executable(sx126x_pico_tx sx126x_pico_tx.c)
-add_executable(sx126x_pico_rx sx126x_pico_rx.c)
+add_executable(sx126x_pico_tx src/sx126x_pico_tx.c)
+add_executable(sx126x_pico_rx src/sx126x_pico_rx.c)
 
 pico_set_program_name(sx126x_pico_tx "sx126x_pico_tx")
 pico_set_program_name(sx126x_pico_rx "sx126x_pico_rx")
@@ -74,19 +74,20 @@ target_sources(sx126x INTERFACE
     ${SX126X_PATH}/src/sx126x.c
     ${SX126X_PATH}/src/sx126x.h
 
-    ${CMAKE_CURRENT_LIST_DIR}/src/pico_config.h
-    ${CMAKE_CURRENT_LIST_DIR}/src/pico_gpio.h
-    ${CMAKE_CURRENT_LIST_DIR}/src/pico_gpio.c
-    ${CMAKE_CURRENT_LIST_DIR}/src/pico_spi.h
-    ${CMAKE_CURRENT_LIST_DIR}/src/pico_spi.c
-    ${CMAKE_CURRENT_LIST_DIR}/src/sx126x_hal_context.h
-    ${CMAKE_CURRENT_LIST_DIR}/src/sx126x_hal.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/pico/pico_config.h
+    ${CMAKE_CURRENT_LIST_DIR}/src/pico/pico_gpio.h
+    ${CMAKE_CURRENT_LIST_DIR}/src/pico/pico_gpio.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/pico/pico_spi.h
+    ${CMAKE_CURRENT_LIST_DIR}/src/pico/pico_spi.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/pico/sx126x_hal_context.h
+    ${CMAKE_CURRENT_LIST_DIR}/src/pico/sx126x_hal.c
 )
 
 target_include_directories(sx126x INTERFACE
     ${SX126X_PATH}/src
 
     ${CMAKE_CURRENT_LIST_DIR}/src/
+    ${CMAKE_CURRENT_LIST_DIR}/src/pico
 )
 
 target_link_libraries(sx126x_pico_tx pico_stdlib hardware_spi sx126x)
