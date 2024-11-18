@@ -57,7 +57,7 @@ target_include_directories(sx126x_pico_rx PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}
 )
 
-set(SX126X_PATH ${CMAKE_CURRENT_LIST_DIR}/lib/SWSD003/sx126x/sx126x_driver)
+set(SX126X_PATH ${CMAKE_CURRENT_LIST_DIR}/lib/sx126x_driver)
 
 add_library(sx126x INTERFACE)
 

@@ -1,3 +1,3 @@
-[submodule "lib/SWSD003"]
-	path = lib/SWSD003
-	url = https://github.com/Lora-net/SWSD003.git
+[submodule "lib/sx126x_driver"]
+	path = lib/sx126x_driver
+	url = https://github.com/Lora-net/sx126x_driver.git
