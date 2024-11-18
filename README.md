@@ -1,6 +1,6 @@
 # sx126x-pico
 
-sx126x driver ([SWSD003](https://github.com/Lora-net/SWSD003)) port for raspberry pi pico
+[sx126x driver](https://github.com/Lora-net/sx126x_driver/) port for raspberry pi pico
 
 ## Usage
 
