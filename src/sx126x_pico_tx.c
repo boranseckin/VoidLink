@@ -23,7 +23,7 @@ void dio1_callback(uint gpio, uint32_t events) {
 
     sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
     sx126x_get_status(&context, &status);
-    if (!(status.chip_mode == SX126X_CHIP_MODE_TX &&
+    if (!(status.chip_mode == SX126X_CHIP_MODE_STBY_RC &&
           status.cmd_status == SX126X_CMD_STATUS_CMD_TX_DONE)) {
       printf("status error (mode: %d | cmd: %d)\n", status.chip_mode, status.cmd_status);
       return;
