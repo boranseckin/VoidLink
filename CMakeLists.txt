@@ -58,6 +58,16 @@ target_include_directories(sx126x_pico_rx PRIVATE
 )
 
 set(SX126X_PATH ${CMAKE_CURRENT_LIST_DIR}/lib/sx126x_driver)
+set(EPAPER_PATH ${CMAKE_CURRENT_LIST_DIR}/lib/epaper_driver)
+
+add_subdirectory(${EPAPER_PATH}/Config)
+add_subdirectory(${EPAPER_PATH}/e-Paper)
+add_subdirectory(${EPAPER_PATH}/Fonts)
+add_subdirectory(${EPAPER_PATH}/GUI)
+
+include_directories(${EPAPER_PATH}/Config)
+include_directories(${EPAPER_PATH}/e-Paper)
+include_directories(${EPAPER_PATH}/GUI)
 
 add_library(sx126x INTERFACE)
 
@@ -90,8 +100,8 @@ target_include_directories(sx126x INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/src/pico
 )
 
-target_link_libraries(sx126x_pico_tx pico_stdlib hardware_spi sx126x)
-target_link_libraries(sx126x_pico_rx pico_stdlib hardware_spi sx126x)
+target_link_libraries(sx126x_pico_tx pico_stdlib hardware_spi sx126x ePaper GUI Fonts Config)
+target_link_libraries(sx126x_pico_rx pico_stdlib hardware_spi sx126x ePaper GUI Fonts Config)
 
 pico_add_extra_outputs(sx126x_pico_tx)
 pico_add_extra_outputs(sx126x_pico_rx)
