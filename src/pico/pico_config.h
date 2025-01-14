@@ -5,9 +5,9 @@
 #define PIN_MISO PICO_DEFAULT_SPI_RX_PIN
 #define PIN_MOSI PICO_DEFAULT_SPI_TX_PIN
 #define PIN_SCLK PICO_DEFAULT_SPI_SCK_PIN
-#define PIN_NSS 8
-#define PIN_RESET 9
-#define PIN_BUSY 11
-#define PIN_DIO1 10
+#define PIN_NSS 17
+#define PIN_RESET 20
+#define PIN_BUSY 21
+#define PIN_DIO1 22
 
 #endif // PICO_CONFIG_H
