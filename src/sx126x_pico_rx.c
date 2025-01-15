@@ -28,8 +28,7 @@ void dio1_callback(uint gpio, uint32_t events) {
     // Make sure the data available status is set before reading the rx buffer.
     sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
     sx126x_get_status(&context, &status);
-    if (!(status.chip_mode == SX126X_CHIP_MODE_RX &&
-          status.cmd_status == SX126X_CMD_STATUS_DATA_AVAILABLE)) {
+    if (status.cmd_status != SX126X_CMD_STATUS_DATA_AVAILABLE) {
       printf("status error (mode: %d | cmd: %d)\n", status.chip_mode, status.cmd_status);
       return;
     }
