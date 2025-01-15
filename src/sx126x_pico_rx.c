@@ -9,12 +9,18 @@
 #include "sx126x_debug.h"
 #include "sx126x_hal_context.h"
 
+#include "EPD_2in13_V4.h"
+#include "GUI_Paint.h"
+
 #define PAYLOAD_BUFFER_SIZE 512
 
 static uint8_t payload_buf[PAYLOAD_BUFFER_SIZE];
 static sx126x_rx_buffer_status_t buffer_status;
 
 static sx126x_hal_context_t context;
+
+static UBYTE *image;
+static bool DRAW = false;
 
 void dio1_callback(uint gpio, uint32_t events) {
   printf("IRQ: ");
@@ -54,6 +60,11 @@ void dio1_callback(uint gpio, uint32_t events) {
       printf(" %d", payload_buf[i]);
     }
     printf("\n");
+
+    // Draw the received message on the e-paper display.
+    Paint_Clear(WHITE);
+    Paint_DrawString_EN(20, 20, (char *)payload_buf, &Font20, WHITE, BLACK);
+    DRAW = true;
   } else if (irq == SX126X_IRQ_PREAMBLE_DETECTED) {
     printf("PREAMBLE_DETECTED\n");
   } else if (irq == SX126X_IRQ_SYNC_WORD_VALID) {
@@ -101,7 +112,32 @@ int main() {
   gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
   gpio_put(PICO_DEFAULT_LED_PIN, 1);
 
-  sleep_ms(1000);
+  if (DEV_Module_Init() != 0) {
+    return -1;
+  }
+
+  EPD_2in13_V4_Init();
+  EPD_2in13_V4_Clear();
+
+  UWORD image_size =
+      ((EPD_2in13_V4_WIDTH % 8 == 0) ? (EPD_2in13_V4_WIDTH / 8) : (EPD_2in13_V4_WIDTH / 8 + 1)) *
+      EPD_2in13_V4_HEIGHT;
+  if ((image = (UBYTE *)malloc(image_size)) == NULL) {
+    printf("Failed to apply for black memory...\n");
+    return -1;
+  }
+
+  // Create a new display buffer
+  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  // Paint the whole frame white
+  Paint_Clear(WHITE);
+  // Draw some text on the frame
+  Paint_DrawString_EN(20, 20, "hello world", &Font20, WHITE, BLACK);
+  // Display the frame
+  EPD_2in13_V4_Display_Base(image);
+  // Put the display to sleep until the next update
+  EPD_2in13_V4_Sleep();
+
   printf("Pico Lora\n");
 
   uint8_t reg = 0;
@@ -169,6 +205,15 @@ int main() {
   printf("RX started\n");
 
   while (true) {
-    tight_loop_contents();
+    // tight_loop_contents();
+    if (DRAW) {
+      EPD_2in13_V4_Init();
+      EPD_2in13_V4_Clear();
+      EPD_2in13_V4_Display_Base(image);
+      EPD_2in13_V4_Sleep();
+      DRAW = false;
+      sleep_ms(1000);
+    }
+    sleep_ms(1000);
   }
 }

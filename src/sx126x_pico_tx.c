@@ -136,9 +136,9 @@ int main() {
   sx126x_set_pa_cfg(&context, &pa_cfg);
   sx126x_set_tx_params(&context, 0x16, SX126X_RAMP_40_US);
 
-  uint8_t data[4] = {4, 2, 3, 1};
+  char data[] = "magic: 4 8 16 48";
 
-  sx126x_write_buffer(&context, 0, data, 4);
+  sx126x_write_buffer(&context, 0, data, strlen(data));
 
   sx126x_mod_params_lora_t mod_params = {
       .sf = SX126X_LORA_SF7,
@@ -151,7 +151,7 @@ int main() {
   sx126x_pkt_params_lora_t packet_params = {
       .preamble_len_in_symb = 0x10,
       .header_type = SX126X_LORA_PKT_EXPLICIT,
-      .pld_len_in_bytes = 0x4,
+      .pld_len_in_bytes = strlen(data),
       .crc_is_on = true,
       .invert_iq_is_on = false,
   };
@@ -164,11 +164,11 @@ int main() {
   // write_reg_data = 0x44;
   // sx126x_write_register(&context, 0x0741, &write_reg_data, 1);
 
-  sx126x_set_tx(&context, 0x0);
-  sx126x_check(&context);
-  printf("TX started\n");
-
   while (true) {
-    tight_loop_contents();
+    // tight_loop_contents();
+    sx126x_set_tx(&context, 0x0);
+    sx126x_check(&context);
+    printf("TX started\n");
+    sleep_ms(8000);
   }
 }
