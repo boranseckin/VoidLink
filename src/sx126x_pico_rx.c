@@ -6,6 +6,7 @@
 
 #include "pico_config.h"
 #include "sx126x.h"
+#include "sx126x_debug.h"
 #include "sx126x_hal_context.h"
 
 #define PAYLOAD_BUFFER_SIZE 512
@@ -162,14 +163,10 @@ int main() {
   // sx126x_write_register(&context, 0x0741, &write_reg_data, 1);
 
   // continuous receive
-  sx126x_set_rx(&context, 0xFFFFFF);
-
-  sx126x_get_status(&context, &status);
-  sx126x_get_device_errors(&context, &errors);
-  if (status.chip_mode == SX126X_CHIP_MODE_RX && status.cmd_status == SX126X_CMD_STATUS_RFU &&
-      errors == 0) {
-    printf("RX started\n");
-  }
+  // set_rx only accepts timeout in ms, so we use the RTC step function to achieve continuous
+  sx126x_set_rx_with_timeout_in_rtc_step(&context, SX126X_RX_CONTINUOUS);
+  sx126x_check(&context);
+  printf("RX started\n");
 
   while (true) {
     tight_loop_contents();

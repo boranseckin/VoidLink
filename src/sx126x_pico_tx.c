@@ -6,6 +6,7 @@
 
 #include "pico_config.h"
 #include "sx126x.h"
+#include "sx126x_debug.h"
 #include "sx126x_hal_context.h"
 
 static sx126x_hal_context_t context;
@@ -164,13 +165,8 @@ int main() {
   // sx126x_write_register(&context, 0x0741, &write_reg_data, 1);
 
   sx126x_set_tx(&context, 0x0);
-
-  sx126x_get_status(&context, &status);
-  sx126x_get_device_errors(&context, &errors);
-  if (status.chip_mode == SX126X_CHIP_MODE_TX && status.cmd_status == SX126X_CMD_STATUS_RFU &&
-      errors == 0) {
-    printf("TX success\n");
-  }
+  sx126x_check(&context);
+  printf("TX started\n");
 
   while (true) {
     tight_loop_contents();
