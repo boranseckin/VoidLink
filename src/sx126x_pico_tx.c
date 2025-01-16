@@ -136,7 +136,7 @@ int main() {
   sx126x_set_pa_cfg(&context, &pa_cfg);
   sx126x_set_tx_params(&context, 0x16, SX126X_RAMP_40_US);
 
-  char data[] = "magic: 4 8 16 48";
+  char data[] = "rx: 4 8 16 48";
 
   sx126x_write_buffer(&context, 0, data, strlen(data));
 
