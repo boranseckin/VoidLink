@@ -63,7 +63,10 @@ void dio1_callback(uint gpio, uint32_t events) {
 
     // Draw the received message on the e-paper display.
     Paint_Clear(WHITE);
-    Paint_DrawString_EN(20, 20, (char *)payload_buf, &Font20, WHITE, BLACK);
+    // add "rx: " to the beginning of the payload
+    char payload_buf_with_rx[buffer_status.pld_len_in_bytes + 4];
+    sprintf(payload_buf_with_rx, "rx: %s", payload_buf);
+    Paint_DrawString_EN(20, 20, (char *)payload_buf_with_rx, &Font20, WHITE, BLACK);
     DRAW = true;
   } else if (irq == SX126X_IRQ_PREAMBLE_DETECTED) {
     printf("PREAMBLE_DETECTED\n");
