@@ -208,7 +208,6 @@ int main() {
     // tight_loop_contents();
     if (DRAW) {
       EPD_2in13_V4_Init();
-      EPD_2in13_V4_Clear();
       EPD_2in13_V4_Display_Base(image);
       EPD_2in13_V4_Sleep();
       DRAW = false;
