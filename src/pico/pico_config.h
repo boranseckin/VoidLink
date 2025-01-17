@@ -10,4 +10,8 @@
 #define PIN_BUSY 21
 #define PIN_DIO1 22
 
+#define PIN_BUTTON_NEXT 5
+#define PIN_BUTTON_OK 4
+#define PIN_BUTTON_BACK 3
+
 #endif // PICO_CONFIG_H
