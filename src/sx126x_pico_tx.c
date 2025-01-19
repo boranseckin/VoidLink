@@ -17,10 +17,18 @@ static sx126x_rx_buffer_status_t buffer_status;
 #define PAYLOAD_BUFFER_SIZE 512
 
 static uint8_t payload_buf[PAYLOAD_BUFFER_SIZE];
-static uint8_t payload_len=0;
+static uint8_t payload_len = 0;
 
 static UBYTE *image;
+static uint8_t cursor = 0;
+static bool TRANSMIT = false;
 static bool DRAW = false;
+
+static char *messages[] = {
+    "Hello",
+    "World",
+    "Pico",
+};
 
 static sx126x_hal_context_t context;
 
@@ -45,12 +53,10 @@ void dio1_callback(uint gpio, uint32_t events) {
 
     // Draw the sent message on the e-paper display.
     Paint_Clear(WHITE);
-    char payload_buf_with_tx[strlen(payload_buf)+4];
-    sprintf(payload_buf_with_tx,"tx: %s",payload_buf);
+    char payload_buf_with_tx[strlen(payload_buf) + 4];
+    sprintf(payload_buf_with_tx, "tx: %s", payload_buf);
     Paint_DrawString_EN(20, 20, (char *)payload_buf_with_tx, &Font20, WHITE, BLACK);
     DRAW = true;
-    
-
   } else if (irq == SX126X_IRQ_RX_DONE) {
     printf("RX_DONE\n");
   } else if (irq == SX126X_IRQ_PREAMBLE_DETECTED) {
@@ -74,18 +80,40 @@ void dio1_callback(uint gpio, uint32_t events) {
   }
 }
 
-void prepare_tx(char* str){
-  strcpy(payload_buf,str);
+void button_callback(uint gpio, uint32_t events) {
+  printf("button: %d\n", gpio);
+  if (DRAW)
+    return;
 
-    sx126x_write_buffer(&context, 0, payload_buf, strlen(payload_buf));
-    sx126x_pkt_params_lora_t packet_params = {
+  if (gpio == PIN_BUTTON_NEXT) {
+    printf("next\n");
+    cursor = (cursor + 1) % 3;
+
+    for (int i = 0; i < 3; i++) {
+      Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
+    }
+    Paint_DrawString_EN(0, 34 + cursor * 24, ">", &Font16, BLACK, WHITE);
+    DRAW = true;
+  } else if (gpio == PIN_BUTTON_OK) {
+    printf("ok\n");
+    TRANSMIT = true;
+  } else if (gpio == PIN_BUTTON_BACK) {
+    printf("back\n");
+  }
+}
+
+void prepare_tx(char *str) {
+  strcpy(payload_buf, str);
+
+  sx126x_write_buffer(&context, 0, payload_buf, strlen(payload_buf));
+  sx126x_pkt_params_lora_t packet_params = {
       .preamble_len_in_symb = 0x10,
       .header_type = SX126X_LORA_PKT_EXPLICIT,
       .pld_len_in_bytes = strlen(payload_buf),
       .crc_is_on = true,
       .invert_iq_is_on = false,
   };
-    sx126x_set_lora_pkt_params(&context, &packet_params);
+  sx126x_set_lora_pkt_params(&context, &packet_params);
 }
 
 int main() {
@@ -114,6 +142,14 @@ int main() {
   // Enable the interrupts and set the callback function for DIO1 pin.
   pico_gpio_set_interrupt(context.dio1.pin, GPIO_IRQ_EDGE_RISE, &dio1_callback);
 
+  pico_gpio_init(PIN_BUTTON_NEXT, GPIO_FUNC_SIO, GPIO_DIR_IN, GPIO_PULL_UP, 1);
+  pico_gpio_init(PIN_BUTTON_OK, GPIO_FUNC_SIO, GPIO_DIR_IN, GPIO_PULL_UP, 1);
+  pico_gpio_init(PIN_BUTTON_BACK, GPIO_FUNC_SIO, GPIO_DIR_IN, GPIO_PULL_UP, 1);
+
+  pico_gpio_set_interrupt(PIN_BUTTON_NEXT, GPIO_IRQ_EDGE_FALL, &button_callback);
+  pico_gpio_set_interrupt(PIN_BUTTON_OK, GPIO_IRQ_EDGE_FALL, &button_callback);
+  pico_gpio_set_interrupt(PIN_BUTTON_BACK, GPIO_IRQ_EDGE_FALL, &button_callback);
+
   // Light up the onboard LED to signify setup is done.
   gpio_init(PICO_DEFAULT_LED_PIN);
   gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
@@ -125,6 +161,7 @@ int main() {
 
   EPD_2in13_V4_Init();
   EPD_2in13_V4_Clear();
+  EPD_2in13_V4_Sleep();
 
   UWORD image_size =
       ((EPD_2in13_V4_WIDTH % 8 == 0) ? (EPD_2in13_V4_WIDTH / 8) : (EPD_2in13_V4_WIDTH / 8 + 1)) *
@@ -138,13 +175,13 @@ int main() {
   Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
   // Paint the whole frame white
   Paint_Clear(WHITE);
-  // Draw some text on the frame
-  Paint_DrawString_EN(20, 20, "hello world", &Font20, WHITE, BLACK);
-  // Display the frame
-  EPD_2in13_V4_Display_Base(image);
-  // Put the display to sleep until the next update
-  EPD_2in13_V4_Sleep();
-  sleep_ms(1000);
+  // // Draw some text on the frame
+  // Paint_DrawString_EN(20, 20, "hello world", &Font20, BLACK, WHITE);
+  // // Display the frame
+  // EPD_2in13_V4_Display_Base(image);
+  // // Put the display to sleep until the next update
+  // EPD_2in13_V4_Sleep();
+  // sleep_ms(1000);
   printf("Pico Lora\n");
 
   // Try to read a register with a known reset value from the radio.
@@ -197,7 +234,7 @@ int main() {
   sx126x_set_pa_cfg(&context, &pa_cfg);
   sx126x_set_tx_params(&context, 0x16, SX126X_RAMP_40_US);
 
-  //sx126x_write_buffer(&context, 0, payload_buf, strlen(payload_buf));
+  // sx126x_write_buffer(&context, 0, payload_buf, strlen(payload_buf));
 
   sx126x_mod_params_lora_t mod_params = {
       .sf = SX126X_LORA_SF7,
@@ -206,17 +243,17 @@ int main() {
       .ldro = 0,
   };
   sx126x_set_lora_mod_params(&context, &mod_params);
-/*
-  sx126x_pkt_params_lora_t packet_params = {
-      .preamble_len_in_symb = 0x10,
-      .header_type = SX126X_LORA_PKT_EXPLICIT,
-      .pld_len_in_bytes = strlen(payload_buf),
-      .crc_is_on = true,
-      .invert_iq_is_on = false,
-  };
-  
-  sx126x_set_lora_pkt_params(&context, &packet_params);
-*/
+  /*
+    sx126x_pkt_params_lora_t packet_params = {
+        .preamble_len_in_symb = 0x10,
+        .header_type = SX126X_LORA_PKT_EXPLICIT,
+        .pld_len_in_bytes = strlen(payload_buf),
+        .crc_is_on = true,
+        .invert_iq_is_on = false,
+    };
+
+    sx126x_set_lora_pkt_params(&context, &packet_params);
+  */
   sx126x_set_dio_irq_params(&context, 0xFFFF, 0xFFFF, 0x0000, 0x0000);
 
   // uint8_t write_reg_data = 0x34;
@@ -224,18 +261,34 @@ int main() {
   // write_reg_data = 0x44;
   // sx126x_write_register(&context, 0x0741, &write_reg_data, 1);
 
+  // Draw message selection screen
+  Paint_Clear(WHITE);
+  Paint_DrawString_EN(0, 10, "Select a message:", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 34, "1. Hello", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 58, "2. World", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 82, "3. Pico", &Font16, BLACK, WHITE);
+
+  // Display cursor
+  Paint_DrawString_EN(0, 34, ">", &Font16, BLACK, WHITE);
+  EPD_2in13_V4_Init();
+  EPD_2in13_V4_Display_Base(image);
+  EPD_2in13_V4_Sleep();
+
   while (true) {
     // tight_loop_contents();
-    prepare_tx("test");
-    sx126x_set_tx(&context, 0x0);
-    sx126x_check(&context);
-    printf("TX started\n");
+    if (TRANSMIT) {
+      printf("TX: %s\n", messages[cursor]);
+      prepare_tx(messages[cursor]);
+      sx126x_set_tx(&context, 0x0);
+      sx126x_check(&context);
+      TRANSMIT = false;
+    }
+
     if (DRAW) {
       EPD_2in13_V4_Init();
       EPD_2in13_V4_Display_Base(image);
       EPD_2in13_V4_Sleep();
       DRAW = false;
     }
-    sleep_ms(8000);
   }
 }
