@@ -54,3 +54,9 @@ The default pinout diagram between sx126x and pico.
 | DC   | GP8 (11)           |
 | RST  | GP12 (16)          |
 | BUSY | GP13 (17)          |
+
+| Button | uC      |
+| ------ | ------- |
+| Next   | GP5 (7) |
+| Ok     | GP4 (6) |
+| Back   | GP3 (5) |
