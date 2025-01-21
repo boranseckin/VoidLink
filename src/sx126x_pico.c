@@ -35,7 +35,6 @@ typedef enum {
   STATE_TX,
   STATE_TX_DONE,
   STATE_RX,
-  STATE_RX_DONE,
 } state_t;
 
 static state_t state = STATE_IDLE;
@@ -103,7 +102,7 @@ void handle_rx_callback() {
   Paint_DrawString_EN(0, 106, (char *)payload_buf_with_rx, &Font16, BLACK, WHITE);
 
   screen = SCREEN_DRAW_READY;
-  state = STATE_RX_DONE;
+  state = STATE_RX;
 }
 
 // Callback function for everytime an interrupt is detected on DIO1.
@@ -323,6 +322,22 @@ void receive_cont() {
 }
 
 void core1_entry() {
+  // Create a new display buffer
+  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  // Paint the whole frame white
+  Paint_Clear(WHITE);
+
+  // Draw message selection screen
+  Paint_DrawString_EN(0, 10, "Select a message:", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 34, "1. Hello", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 58, "2. World", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 82, "3. Pico", &Font16, BLACK, WHITE);
+
+  // Display cursor
+  Paint_DrawString_EN(0, 34, ">", &Font16, BLACK, WHITE);
+
+  screen = SCREEN_DRAW_READY;
+
   while (true) {
     uint32_t flag = multicore_fifo_pop_blocking();
 
@@ -346,32 +361,13 @@ int main() {
 
   multicore_launch_core1(core1_entry);
 
-  // Create a new display buffer
-  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
-  // Paint the whole frame white
-  Paint_Clear(WHITE);
-
-  // Draw message selection screen
-  Paint_DrawString_EN(0, 10, "Select a message:", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 34, "1. Hello", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 58, "2. World", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 82, "3. Pico", &Font16, BLACK, WHITE);
-
-  // Display cursor
-  Paint_DrawString_EN(0, 34, ">", &Font16, BLACK, WHITE);
-  screen = SCREEN_DRAW_READY;
+  printf("setup done\n");
 
   while (true) {
     if (state == STATE_TX_READY) {
       transmit_string(messages[cursor]);
     } else if (state == STATE_TX_DONE) {
-      // start a new reception
-      receive_cont();
-      state = STATE_RX;
-    } else if (state == STATE_RX_DONE) {
-      // start a new reception
-      receive_cont();
-      state = STATE_RX;
+      state = STATE_IDLE;
     } else if (state == STATE_IDLE) {
       receive_cont();
       state = STATE_RX;
@@ -386,7 +382,5 @@ int main() {
         screen = SCREEN_IDLE;
       }
     }
-
-    sleep_ms(100);
   }
 }
