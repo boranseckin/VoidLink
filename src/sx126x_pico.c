@@ -25,7 +25,7 @@ static uint8_t cursor = 0;
 static char *messages[] = {
     "Hello",
     "World",
-    "Pico",
+    "Pico!",
 };
 
 // Main state machine
@@ -331,7 +331,7 @@ void core1_entry() {
   Paint_DrawString_EN(0, 10, "Select a message:", &Font16, BLACK, WHITE);
   Paint_DrawString_EN(20, 34, "1. Hello", &Font16, BLACK, WHITE);
   Paint_DrawString_EN(20, 58, "2. World", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 82, "3. Pico", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 82, "3. Pico!", &Font16, BLACK, WHITE);
 
   // Display cursor
   Paint_DrawString_EN(0, 34, ">", &Font16, BLACK, WHITE);
