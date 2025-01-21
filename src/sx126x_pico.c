@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "hardware/uart.h"
+#include "pico/multicore.h"
 #include "pico/stdlib.h"
 #include "tusb.h"
 
@@ -42,6 +43,7 @@ static state_t state = STATE_IDLE;
 // Screen state machine
 typedef enum {
   SCREEN_IDLE,
+  SCREEN_DRAW_READY,
   SCREEN_DRAW,
 } screen_t;
 
@@ -100,7 +102,7 @@ void handle_rx_callback() {
   sprintf(payload_buf_with_rx, "rx: %s", payload_buf);
   Paint_DrawString_EN(0, 106, (char *)payload_buf_with_rx, &Font16, BLACK, WHITE);
 
-  screen = SCREEN_DRAW;
+  screen = SCREEN_DRAW_READY;
   state = STATE_RX_DONE;
 }
 
@@ -121,7 +123,7 @@ void handle_dio1_callback(uint gpio, uint32_t events) {
 }
 
 void handle_button_callback(uint gpio, uint32_t events) {
-  if (screen == SCREEN_DRAW || (state != STATE_IDLE && state != STATE_RX))
+  if (screen != SCREEN_IDLE || (state != STATE_IDLE && state != STATE_RX))
     return;
 
   if (gpio == PIN_BUTTON_NEXT) {
@@ -130,7 +132,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
       Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
     }
     Paint_DrawString_EN(0, 34 + cursor * 24, ">", &Font16, BLACK, WHITE);
-    screen = SCREEN_DRAW;
+    screen = SCREEN_DRAW_READY;
   } else if (gpio == PIN_BUTTON_OK) {
     state = STATE_TX_READY;
   } else if (gpio == PIN_BUTTON_BACK) {
@@ -320,6 +322,20 @@ void receive_cont() {
   sx126x_set_rx_with_timeout_in_rtc_step(&context, SX126X_RX_CONTINUOUS);
 }
 
+void core1_entry() {
+  while (true) {
+    uint32_t flag = multicore_fifo_pop_blocking();
+
+    if (flag == 0) {
+      EPD_2in13_V4_Init();
+      EPD_2in13_V4_Display_Base(image);
+      EPD_2in13_V4_Sleep();
+      sleep_ms(100);
+      multicore_fifo_push_blocking_inline(0);
+    }
+  }
+}
+
 int main() {
   sx126x_errors_mask_t errors = 0;
   sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
@@ -327,6 +343,8 @@ int main() {
   setup_io();
   setup_display();
   setup_sx126x();
+
+  multicore_launch_core1(core1_entry);
 
   // Create a new display buffer
   Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
@@ -341,9 +359,7 @@ int main() {
 
   // Display cursor
   Paint_DrawString_EN(0, 34, ">", &Font16, BLACK, WHITE);
-  EPD_2in13_V4_Init();
-  EPD_2in13_V4_Display_Base(image);
-  EPD_2in13_V4_Sleep();
+  screen = SCREEN_DRAW_READY;
 
   while (true) {
     if (state == STATE_TX_READY) {
@@ -359,15 +375,16 @@ int main() {
     } else if (state == STATE_IDLE) {
       receive_cont();
       state = STATE_RX;
-    } else {
-      // nothing to do here, just wait for the interrupt
     }
 
-    if (screen == SCREEN_DRAW) {
-      EPD_2in13_V4_Init();
-      EPD_2in13_V4_Display_Base(image);
-      EPD_2in13_V4_Sleep();
-      screen = SCREEN_IDLE;
+    if (screen == SCREEN_DRAW_READY) {
+      multicore_fifo_push_blocking_inline(0);
+      screen = SCREEN_DRAW;
+    } else if (screen == SCREEN_DRAW) {
+      if (multicore_fifo_rvalid()) {
+        multicore_fifo_pop_blocking_inline();
+        screen = SCREEN_IDLE;
+      }
     }
 
     sleep_ms(100);

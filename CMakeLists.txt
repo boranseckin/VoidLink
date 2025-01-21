@@ -110,9 +110,9 @@ target_include_directories(sx126x INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/src/pico
 )
 
-target_link_libraries(sx126x_pico pico_stdlib pico_rand hardware_spi sx126x ePaper GUI Fonts Config)
-target_link_libraries(sx126x_pico_tx pico_stdlib pico_rand hardware_spi sx126x ePaper GUI Fonts Config)
-target_link_libraries(sx126x_pico_rx pico_stdlib pico_rand hardware_spi sx126x ePaper GUI Fonts Config)
+target_link_libraries(sx126x_pico pico_stdlib pico_multicore pico_rand hardware_spi sx126x ePaper GUI Fonts Config)
+target_link_libraries(sx126x_pico_tx pico_stdlib pico_multicore pico_rand hardware_spi sx126x ePaper GUI Fonts Config)
+target_link_libraries(sx126x_pico_rx pico_stdlib pico_multicore pico_rand hardware_spi sx126x ePaper GUI Fonts Config)
 
 pico_add_extra_outputs(sx126x_pico)
 pico_add_extra_outputs(sx126x_pico_tx)
