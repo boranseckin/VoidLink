@@ -26,10 +26,7 @@ make
 5. Load the firmware onto the target.
 
 ```bash
-# for tx
-picotool load sx126x_pico_tx.uf2
-# for rx
-picotool load sx126x_pico_rx.uf2
+picotool load sx126x_pico.uf2
 ```
 
 ## Pinout

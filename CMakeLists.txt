@@ -33,15 +33,21 @@ project(sx126x_pico C CXX ASM)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
+add_executable(sx126x_pico src/sx126x_pico.c)
 add_executable(sx126x_pico_tx src/sx126x_pico_tx.c)
 add_executable(sx126x_pico_rx src/sx126x_pico_rx.c)
 
+pico_set_program_name(sx126x_pico "sx126x_pico")
 pico_set_program_name(sx126x_pico_tx "sx126x_pico_tx")
 pico_set_program_name(sx126x_pico_rx "sx126x_pico_rx")
+pico_set_program_version(sx126x_pico "0.1")
 pico_set_program_version(sx126x_pico_tx "0.1")
 pico_set_program_version(sx126x_pico_rx "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
+pico_enable_stdio_uart(sx126x_pico 0)
+pico_enable_stdio_usb(sx126x_pico 1)
+
 pico_enable_stdio_uart(sx126x_pico_tx 0)
 pico_enable_stdio_usb(sx126x_pico_tx 1)
 
@@ -49,6 +55,10 @@ pico_enable_stdio_uart(sx126x_pico_rx 0)
 pico_enable_stdio_usb(sx126x_pico_rx 1)
 
 # Add the standard include files to the build
+target_include_directories(sx126x_pico PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}
+)
+
 target_include_directories(sx126x_pico_tx PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}
 )
@@ -100,9 +110,10 @@ target_include_directories(sx126x INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/src/pico
 )
 
-target_link_libraries(sx126x_pico_tx pico_stdlib hardware_spi sx126x ePaper GUI Fonts Config)
-target_link_libraries(sx126x_pico_rx pico_stdlib hardware_spi sx126x ePaper GUI Fonts Config)
+target_link_libraries(sx126x_pico pico_stdlib pico_rand hardware_spi sx126x ePaper GUI Fonts Config)
+target_link_libraries(sx126x_pico_tx pico_stdlib pico_rand hardware_spi sx126x ePaper GUI Fonts Config)
+target_link_libraries(sx126x_pico_rx pico_stdlib pico_rand hardware_spi sx126x ePaper GUI Fonts Config)
 
+pico_add_extra_outputs(sx126x_pico)
 pico_add_extra_outputs(sx126x_pico_tx)
 pico_add_extra_outputs(sx126x_pico_rx)
-

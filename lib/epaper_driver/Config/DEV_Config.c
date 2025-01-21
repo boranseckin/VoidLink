@@ -104,7 +104,6 @@ UBYTE DEV_Module_Init(void) {
   gpio_set_function(EPD_CLK_PIN, GPIO_OUT);
   gpio_set_function(EPD_MOSI_PIN, GPIO_OUT);
 
-  printf("DEV_Module_Init OK \r\n");
   return 0;
 }
 

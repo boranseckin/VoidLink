@@ -30,3 +30,29 @@ void sx126x_check(const void *context) {
     printf("\n");
   }
 }
+
+void sx126x_print_decoded_irq(sx126x_irq_mask_t mask) {
+  if (mask == SX126X_IRQ_TX_DONE) {
+    printf("IRQ: TX_DONE\n");
+  } else if (mask == SX126X_IRQ_RX_DONE) {
+    printf("IRQ: RX_DONE\n");
+  } else if (mask == SX126X_IRQ_PREAMBLE_DETECTED) {
+    printf("IRQ: PREAMBLE_DETECTED\n");
+  } else if (mask == SX126X_IRQ_SYNC_WORD_VALID) {
+    printf("IRQ: SYNC_WORD_VALID\n");
+  } else if (mask == SX126X_IRQ_HEADER_VALID) {
+    printf("IRQ: HEADER_VALID\n");
+  } else if (mask == SX126X_IRQ_CRC_ERROR) {
+    printf("IRQ: CRC_ERROR\n");
+  } else if (mask == SX126X_IRQ_CAD_DONE) {
+    printf("IRQ: CAD_ERROR\n");
+  } else if (mask == SX126X_IRQ_CAD_DETECTED) {
+    printf("IRQ: CAD_DETECTED\n");
+  } else if (mask == SX126X_IRQ_TIMEOUT) {
+    printf("IRQ: TIMEOUT\n");
+  } else if (mask == SX126X_IRQ_LR_FHSS_HOP) {
+    printf("IRQ: LR_FHSS_HOP\n");
+  } else {
+    printf("IRQ: unknown or multiple irqs\n");
+  }
+}
