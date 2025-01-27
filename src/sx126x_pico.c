@@ -65,6 +65,13 @@ void handle_message(message_t *incoming) {
     printf("text: %s\n", text[incoming->data[0]]);
   } else if (incoming->mtype == MTYPE_REQ) {
     printf("request: %d\n", incoming->data[0]);
+    if (incoming->data[0] == INFO_VERSION) {
+      tx_payload_buf = new_response_message(incoming->src, INFO_VERSION, 1);
+    } else {
+      tx_payload_buf = new_response_message(incoming->src, incoming->data[0], 0);
+    }
+    state = STATE_TX_READY;
+    return;
   } else if (incoming->mtype == MTYPE_RES) {
     printf("response: %d %d\n", incoming->data[0], incoming->data[1]);
   } else if (incoming->mtype == MTYPE_RAW) {
@@ -81,8 +88,6 @@ void handle_tx_callback() {
     printf("tx status error (mode: %d | cmd: %d)\n", status.chip_mode, status.cmd_status);
     return;
   }
-
-  printf("payload sent\n");
 
   state = STATE_TX_DONE;
 }
@@ -118,9 +123,6 @@ void handle_rx_callback() {
   }
   printf("\n");
 
-  // Handle the received message.
-  handle_message(&rx_payload_buf);
-
   // Draw the received message on the e-paper display.
   // add "rx: " to the beginning of the payload
   // Paint_ClearWindows(0, 106, 122, 122, WHITE);
@@ -129,6 +131,9 @@ void handle_rx_callback() {
   // Paint_DrawString_EN(0, 106, (char *)payload_buf_with_rx, &Font16, BLACK, WHITE);
 
   // screen = SCREEN_DRAW_READY;
+
+  // Handle the received message.
+  handle_message(&rx_payload_buf);
 }
 
 // Callback function for everytime an interrupt is detected on DIO1.
@@ -159,7 +164,13 @@ void handle_button_callback(uint gpio, uint32_t events) {
     Paint_DrawString_EN(0, 34 + cursor * 24, ">", &Font16, BLACK, WHITE);
     screen = SCREEN_DRAW_READY;
   } else if (gpio == PIN_BUTTON_OK) {
-    tx_payload_buf = new_ping_message(get_broadcast_uid());
+    if (cursor == 0) {
+      tx_payload_buf = new_ping_message(get_broadcast_uid());
+    } else if (cursor == 1) {
+      tx_payload_buf = new_text_message(get_broadcast_uid(), TEXT_COPY);
+    } else if (cursor == 2) {
+      tx_payload_buf = new_request_message(get_broadcast_uid(), INFO_VERSION);
+    }
     state = STATE_TX_READY;
   } else if (gpio == PIN_BUTTON_BACK) {
   }
@@ -369,9 +380,9 @@ void core1_entry() {
 
   // Draw message selection screen
   Paint_DrawString_EN(0, 10, "Select a message:", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 34, "1. Hello", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 58, "2. World", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 82, "3. Pico!", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 34, "1. Send Ping", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 58, "2. Send \"COPY\"", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 82, "3. Request version", &Font16, BLACK, WHITE);
 
   // Display cursor
   Paint_DrawString_EN(0, 34, ">", &Font16, BLACK, WHITE);
