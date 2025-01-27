@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "hardware/flash.h"
-
 // 16 predefined text messages
 const char *text[] = {
     "OK",   "NO",     "Over",         "Out", "Go ahead",       "Stand-by",      "Come in",
@@ -183,12 +181,4 @@ message_t new_raw_message(uid_t dst, uint8_t *data[2]) {
   };
   memcpy(msg.data, data, 2);
   return msg;
-}
-
-void setup_network() {
-  uint8_t bytes[8] = {0};
-  flash_get_unique_id(bytes);
-  MY_UID.bytes[0] = bytes[5];
-  MY_UID.bytes[1] = bytes[6];
-  MY_UID.bytes[2] = bytes[7];
 }

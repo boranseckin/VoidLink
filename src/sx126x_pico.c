@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "hardware/flash.h"
 #include "hardware/uart.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
@@ -15,6 +16,7 @@
 
 #include "network.h"
 #include "sx126x_pico.h"
+#include "utils.h"
 
 static message_t rx_payload_buf;
 static message_t tx_payload_buf;
@@ -85,9 +87,11 @@ void handle_tx_callback() {
   sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
   sx126x_get_status(&context, &status);
   if (status.cmd_status != SX126X_CMD_STATUS_CMD_TX_DONE) {
-    printf("tx status error (mode: %d | cmd: %d)\n", status.chip_mode, status.cmd_status);
+    error("tx status error (mode: %d | cmd: %d)\n", status.chip_mode, status.cmd_status);
     return;
   }
+
+  debug("tx done\n");
 
   state = STATE_TX_DONE;
 }
@@ -97,19 +101,19 @@ void handle_rx_callback() {
   sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
   sx126x_get_status(&context, &status);
   if (status.cmd_status != SX126X_CMD_STATUS_DATA_AVAILABLE) {
-    printf("rx status error (mode: %d | cmd: %d)\n", status.chip_mode, status.cmd_status);
+    error("rx status error (mode: %d | cmd: %d)\n", status.chip_mode, status.cmd_status);
     return;
   }
 
   // Get length and the start address of the received message.
   sx126x_rx_buffer_status_t buffer_status = {.buffer_start_pointer = 0, .pld_len_in_bytes = 0};
   sx126x_get_rx_buffer_status(&context, &buffer_status);
-  printf("payload received: %d @ %d\n", buffer_status.pld_len_in_bytes,
-         buffer_status.buffer_start_pointer);
+  debug("payload received: %d @ %d\n", buffer_status.pld_len_in_bytes,
+        buffer_status.buffer_start_pointer);
 
   // Make sure the buffer has enough space to read the message.
   if (buffer_status.pld_len_in_bytes > sizeof(message_t)) {
-    printf("payload is bigger than the buffer (%d)\n", sizeof(message_t));
+    error("payload is bigger than the buffer (%d)\n", sizeof(message_t));
     return;
   }
 
@@ -219,6 +223,8 @@ void setup_io() {
   gpio_init(PICO_DEFAULT_LED_PIN);
   gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
   gpio_put(PICO_DEFAULT_LED_PIN, 1);
+
+  debug("io setup done\n");
 }
 
 void setup_display() {
@@ -226,6 +232,8 @@ void setup_display() {
   EPD_2in13_V4_Init();
   EPD_2in13_V4_Clear();
   EPD_2in13_V4_Sleep();
+
+  debug("display setup done\n");
 }
 
 void setup_sx126x() {
@@ -234,7 +242,7 @@ void setup_sx126x() {
   uint8_t reg = 0;
   sx126x_read_register(&context, 0x0740, &reg, 1);
   if (reg != 0x14) {
-    printf("sanity check failed: %d\n", reg);
+    error("sanity check failed: %d\n", reg);
     while (true) {
       tight_loop_contents();
     }
@@ -257,7 +265,7 @@ void setup_sx126x() {
   sx126x_get_device_errors(&context, &errors);
   if (!(status.chip_mode == SX126X_CHIP_MODE_STBY_RC &&
         status.cmd_status == SX126X_CMD_STATUS_RFU && errors == 0)) {
-    printf("calibration failed\n");
+    error("calibration failed\n");
     while (true) {
       tight_loop_contents();
     }
@@ -299,12 +307,25 @@ void setup_sx126x() {
 
   // Setup the DIO1 pin to trigger for all interrupts.
   sx126x_set_dio_irq_params(&context, 0xFFFF, 0xFFFF, 0x0000, 0x0000);
+
+  debug("sx126x setup done\n");
+}
+
+void setup_network() {
+  sleep_ms(100);
+  uint8_t bytes[8] = {0};
+  flash_get_unique_id(bytes);
+  MY_UID.bytes[0] = bytes[5];
+  MY_UID.bytes[1] = bytes[6];
+  MY_UID.bytes[2] = bytes[7];
+
+  debug("network setup done\n");
 }
 
 // Transmit bytes over the radio.
 void transmit_bytes(uint8_t *bytes, uint8_t length) {
   if (length > 255) {
-    printf("payload too large\n");
+    error("payload too large\n");
     return;
   }
 
@@ -323,6 +344,8 @@ void transmit_bytes(uint8_t *bytes, uint8_t length) {
       .invert_iq_is_on = false,
   };
   sx126x_set_lora_pkt_params(&context, &packet_params);
+
+  debug("tx: %d bytes\n", length);
 
   // Start the transmission.
   sx126x_set_tx(&context, 0x0);
@@ -371,7 +394,7 @@ void receive_cont() {
 }
 
 void core1_entry() {
-  printf("core1 started\n");
+  debug("core1 started\n");
 
   // Create a new display buffer
   Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);

@@ -104,6 +104,7 @@ target_sources(sx126x INTERFACE
 
     ${CMAKE_CURRENT_LIST_DIR}/src/sx126x_pico.h
     ${CMAKE_CURRENT_LIST_DIR}/src/network.h
+    ${CMAKE_CURRENT_LIST_DIR}/src/utils.h
 )
 
 target_include_directories(sx126x INTERFACE
