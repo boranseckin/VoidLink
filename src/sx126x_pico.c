@@ -398,11 +398,11 @@ int main() {
   setup_io();
   setup_display();
   setup_sx126x();
+  setup_network();
 
   multicore_launch_core1(core1_entry);
 
-  printf("setup done\n");
-  // printf("%s is ready\n", uid_to_string(get_uid()));
+  printf("%s is ready\n", uid_to_string(get_uid()));
 
   while (true) {
     if (state == STATE_TX_READY) {

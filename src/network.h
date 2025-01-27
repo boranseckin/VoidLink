@@ -33,19 +33,15 @@ typedef struct {
   uint8_t bytes[3];
 } uid_t;
 
+// must call setup first
+static uid_t MY_UID = {.bytes = {0x00, 0x00, 0x00}};
+static uid_t BROADCAST_UID = {.bytes = {0xFF, 0xFF, 0xFF}};
+
 // Returns the unique id of the device.
-uid_t get_uid() {
-  uint8_t bytes[8] = {0};
-  flash_get_unique_id(bytes);
-  uid_t ret = {.bytes = {bytes[5], bytes[6], bytes[7]}};
-  return ret;
-}
+uid_t get_uid() { return MY_UID; }
 
 // Returns the broadcast id.
-uid_t get_broadcast_uid() {
-  uid_t ret = {.bytes = {0xFF, 0xFF, 0xFF}};
-  return ret;
-}
+uid_t get_broadcast_uid() { return BROADCAST_UID; }
 
 char *uid_to_string(uid_t uid) {
   static char str[9];
@@ -187,4 +183,12 @@ message_t new_raw_message(uid_t dst, uint8_t *data[2]) {
   };
   memcpy(msg.data, data, 2);
   return msg;
+}
+
+void setup_network() {
+  uint8_t bytes[8] = {0};
+  flash_get_unique_id(bytes);
+  MY_UID.bytes[0] = bytes[5];
+  MY_UID.bytes[1] = bytes[6];
+  MY_UID.bytes[2] = bytes[7];
 }
