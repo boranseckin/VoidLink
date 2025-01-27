@@ -16,9 +16,8 @@
 #include "network.h"
 #include "sx126x_pico.h"
 
-#define PAYLOAD_BUFFER_SIZE 255
-static uint8_t rx_payload_buf[PAYLOAD_BUFFER_SIZE];
-static uint8_t tx_payload_buf[PAYLOAD_BUFFER_SIZE];
+static message_t rx_payload_buf;
+static message_t tx_payload_buf;
 
 // ((EPD_2in13_V4_WIDTH % 8 == 0) ? (EPD_2in13_V4_WIDTH / 8) : (EPD_2in13_V4_WIDTH / 8 + 1)) *
 // EPD_2in13_V4_HEIGHT = 4080
@@ -57,8 +56,7 @@ void handle_message(message_t *incoming) {
     printf("ack: %d\n", incoming->data[0]);
   } else if (incoming->mtype == MTYPE_PING) {
     printf("ping\n");
-    message_t pong = new_pong_message(incoming->src);
-    memcpy(tx_payload_buf, &pong, sizeof(message_t));
+    tx_payload_buf = new_pong_message(incoming->src);
     state = STATE_TX_READY;
     return;
   } else if (incoming->mtype == MTYPE_PONG) {
@@ -105,23 +103,23 @@ void handle_rx_callback() {
          buffer_status.buffer_start_pointer);
 
   // Make sure the buffer has enough space to read the message.
-  if (buffer_status.pld_len_in_bytes > PAYLOAD_BUFFER_SIZE) {
-    printf("payload is bigger than the buffer (%d)\n", PAYLOAD_BUFFER_SIZE);
+  if (buffer_status.pld_len_in_bytes > sizeof(message_t)) {
+    printf("payload is bigger than the buffer (%d)\n", sizeof(message_t));
     return;
   }
 
   // Read and print the buffer.
-  sx126x_read_buffer(&context, buffer_status.buffer_start_pointer, rx_payload_buf,
+  sx126x_read_buffer(&context, buffer_status.buffer_start_pointer, (uint8_t *)&rx_payload_buf,
                      buffer_status.pld_len_in_bytes);
 
   printf("<-");
   for (int i = 0; i < buffer_status.pld_len_in_bytes; i++) {
-    printf(" %d", rx_payload_buf[i]);
+    printf(" %d", ((uint8_t *)&rx_payload_buf)[i]);
   }
   printf("\n");
 
   // Handle the received message.
-  handle_message((message_t *)rx_payload_buf);
+  handle_message(&rx_payload_buf);
 
   // Draw the received message on the e-paper display.
   // add "rx: " to the beginning of the payload
@@ -161,8 +159,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
     Paint_DrawString_EN(0, 34 + cursor * 24, ">", &Font16, BLACK, WHITE);
     screen = SCREEN_DRAW_READY;
   } else if (gpio == PIN_BUTTON_OK) {
-    message_t ping = new_ping_message(get_broadcast_uid());
-    memcpy(tx_payload_buf, &ping, sizeof(message_t));
+    tx_payload_buf = new_ping_message(get_broadcast_uid());
     state = STATE_TX_READY;
   } else if (gpio == PIN_BUTTON_BACK) {
   }
@@ -295,7 +292,7 @@ void setup_sx126x() {
 
 // Transmit bytes over the radio.
 void transmit_bytes(uint8_t *bytes, uint8_t length) {
-  if (length > PAYLOAD_BUFFER_SIZE) {
+  if (length > 255) {
     printf("payload too large\n");
     return;
   }
@@ -303,10 +300,8 @@ void transmit_bytes(uint8_t *bytes, uint8_t length) {
   // Set the radio to standby mode, in case we are in receive.
   sx126x_set_standby(&context, SX126X_STANDBY_CFG_RC);
 
-  memcpy(rx_payload_buf, bytes, length);
-
   // Write the payload to the radio's buffer.
-  sx126x_write_buffer(&context, 0, rx_payload_buf, length);
+  sx126x_write_buffer(&context, 0, bytes, length);
 
   // Setup the packet parameters for the transmission. Only length is needed to be updated.
   sx126x_pkt_params_lora_t packet_params = {
@@ -411,7 +406,7 @@ int main() {
 
   while (true) {
     if (state == STATE_TX_READY) {
-      transmit_packet((message_t *)tx_payload_buf);
+      transmit_packet(&tx_payload_buf);
     } else if (state == STATE_TX_DONE) {
       state = STATE_IDLE;
     } else if (state == STATE_IDLE) {
