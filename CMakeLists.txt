@@ -101,6 +101,9 @@ target_sources(sx126x INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/src/pico/pico_spi.c
     ${CMAKE_CURRENT_LIST_DIR}/src/pico/sx126x_hal_context.h
     ${CMAKE_CURRENT_LIST_DIR}/src/pico/sx126x_hal.c
+
+    ${CMAKE_CURRENT_LIST_DIR}/src/sx126x_pico.h
+    ${CMAKE_CURRENT_LIST_DIR}/src/network.h
 )
 
 target_include_directories(sx126x INTERFACE

@@ -13,20 +13,18 @@
 #include "EPD_2in13_V4.h"
 #include "GUI_Paint.h"
 
+#include "network.h"
+#include "sx126x_pico.h"
+
 #define PAYLOAD_BUFFER_SIZE 255
-static uint8_t payload_buf[PAYLOAD_BUFFER_SIZE];
+static uint8_t rx_payload_buf[PAYLOAD_BUFFER_SIZE];
+static uint8_t tx_payload_buf[PAYLOAD_BUFFER_SIZE];
 
 // ((EPD_2in13_V4_WIDTH % 8 == 0) ? (EPD_2in13_V4_WIDTH / 8) : (EPD_2in13_V4_WIDTH / 8 + 1)) *
 // EPD_2in13_V4_HEIGHT = 4080
 #define IMAGE_SIZE 4080
 static uint8_t image[IMAGE_SIZE];
 static uint8_t cursor = 0;
-
-static char *messages[] = {
-    "Hello",
-    "World",
-    "Pico!",
-};
 
 // Main state machine
 typedef enum {
@@ -49,6 +47,34 @@ typedef enum {
 static screen_t screen = SCREEN_IDLE;
 
 static sx126x_hal_context_t context;
+
+// Handle a received message.
+void handle_message(message_t *incoming) {
+  printf("   message received from %s", uid_to_string(incoming->src));
+  printf(" to %s ", uid_to_string(incoming->dst));
+
+  if (incoming->mtype == MTYPE_ACK) {
+    printf("ack: %d\n", incoming->data[0]);
+  } else if (incoming->mtype == MTYPE_PING) {
+    printf("ping\n");
+    message_t pong = new_pong_message(incoming->src);
+    memcpy(tx_payload_buf, &pong, sizeof(message_t));
+    state = STATE_TX_READY;
+    return;
+  } else if (incoming->mtype == MTYPE_PONG) {
+    printf("pong\n");
+  } else if (incoming->mtype == MTYPE_TEXT) {
+    printf("text: %s\n", text[incoming->data[0]]);
+  } else if (incoming->mtype == MTYPE_REQ) {
+    printf("request: %d\n", incoming->data[0]);
+  } else if (incoming->mtype == MTYPE_RES) {
+    printf("response: %d %d\n", incoming->data[0], incoming->data[1]);
+  } else if (incoming->mtype == MTYPE_RAW) {
+    printf("raw: %d %d\n", incoming->data[0], incoming->data[1]);
+  }
+
+  state = STATE_RX;
+}
 
 void handle_tx_callback() {
   sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
@@ -85,24 +111,26 @@ void handle_rx_callback() {
   }
 
   // Read and print the buffer.
-  sx126x_read_buffer(&context, buffer_status.buffer_start_pointer, payload_buf,
+  sx126x_read_buffer(&context, buffer_status.buffer_start_pointer, rx_payload_buf,
                      buffer_status.pld_len_in_bytes);
 
-  printf("->");
+  printf("<-");
   for (int i = 0; i < buffer_status.pld_len_in_bytes; i++) {
-    printf(" %d", payload_buf[i]);
+    printf(" %d", rx_payload_buf[i]);
   }
   printf("\n");
 
+  // Handle the received message.
+  handle_message((message_t *)rx_payload_buf);
+
   // Draw the received message on the e-paper display.
   // add "rx: " to the beginning of the payload
-  Paint_ClearWindows(0, 106, 122, 122, WHITE);
-  char payload_buf_with_rx[buffer_status.pld_len_in_bytes + 4];
-  sprintf(payload_buf_with_rx, "rx: %s", payload_buf);
-  Paint_DrawString_EN(0, 106, (char *)payload_buf_with_rx, &Font16, BLACK, WHITE);
+  // Paint_ClearWindows(0, 106, 122, 122, WHITE);
+  // char payload_buf_with_rx[buffer_status.pld_len_in_bytes + 4];
+  // sprintf(payload_buf_with_rx, "rx: %s", rx_payload_buf);
+  // Paint_DrawString_EN(0, 106, (char *)payload_buf_with_rx, &Font16, BLACK, WHITE);
 
-  screen = SCREEN_DRAW_READY;
-  state = STATE_RX;
+  // screen = SCREEN_DRAW_READY;
 }
 
 // Callback function for everytime an interrupt is detected on DIO1.
@@ -122,7 +150,7 @@ void handle_dio1_callback(uint gpio, uint32_t events) {
 }
 
 void handle_button_callback(uint gpio, uint32_t events) {
-  if (screen != SCREEN_IDLE || (state != STATE_IDLE && state != STATE_RX))
+  if (screen != SCREEN_IDLE || state != STATE_RX)
     return;
 
   if (gpio == PIN_BUTTON_NEXT) {
@@ -133,6 +161,8 @@ void handle_button_callback(uint gpio, uint32_t events) {
     Paint_DrawString_EN(0, 34 + cursor * 24, ">", &Font16, BLACK, WHITE);
     screen = SCREEN_DRAW_READY;
   } else if (gpio == PIN_BUTTON_OK) {
+    message_t ping = new_ping_message(get_broadcast_uid());
+    memcpy(tx_payload_buf, &ping, sizeof(message_t));
     state = STATE_TX_READY;
   } else if (gpio == PIN_BUTTON_BACK) {
   }
@@ -273,10 +303,10 @@ void transmit_bytes(uint8_t *bytes, uint8_t length) {
   // Set the radio to standby mode, in case we are in receive.
   sx126x_set_standby(&context, SX126X_STANDBY_CFG_RC);
 
-  memcpy(payload_buf, bytes, length);
+  memcpy(rx_payload_buf, bytes, length);
 
   // Write the payload to the radio's buffer.
-  sx126x_write_buffer(&context, 0, payload_buf, length);
+  sx126x_write_buffer(&context, 0, rx_payload_buf, length);
 
   // Setup the packet parameters for the transmission. Only length is needed to be updated.
   sx126x_pkt_params_lora_t packet_params = {
@@ -296,6 +326,19 @@ void transmit_bytes(uint8_t *bytes, uint8_t length) {
 
 // Transmit a string over the radio. Must be null terminated.
 void transmit_string(char *string) { transmit_bytes((uint8_t *)string, strlen(string)); }
+
+void transmit_packet(message_t *packet) {
+  printf("->");
+  for (int i = 0; i < sizeof(message_t); i++) {
+    printf(" %d", ((uint8_t *)packet)[i]);
+  }
+  printf("\n");
+
+  printf("   message sent from %s", uid_to_string(packet->src));
+  printf(" to %s\n", uid_to_string(packet->dst));
+
+  transmit_bytes((uint8_t *)packet, sizeof(message_t));
+}
 
 void receive_once() {
   sx126x_pkt_params_lora_t packet_params = {
@@ -322,6 +365,8 @@ void receive_cont() {
 }
 
 void core1_entry() {
+  printf("core1 started\n");
+
   // Create a new display buffer
   Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
   // Paint the whole frame white
@@ -362,10 +407,11 @@ int main() {
   multicore_launch_core1(core1_entry);
 
   printf("setup done\n");
+  // printf("%s is ready\n", uid_to_string(get_uid()));
 
   while (true) {
     if (state == STATE_TX_READY) {
-      transmit_string(messages[cursor]);
+      transmit_packet((message_t *)tx_payload_buf);
     } else if (state == STATE_TX_DONE) {
       state = STATE_IDLE;
     } else if (state == STATE_IDLE) {
