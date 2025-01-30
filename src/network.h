@@ -8,7 +8,7 @@ const char *text[] = {
     "Move",
 };
 
-typedef enum {
+typedef enum __attribute__((__packed__)) {
   TEXT_OK = 0,
   TEXT_NO = 1,
   TEXT_OVER = 2,
@@ -57,19 +57,20 @@ static mid_t mid = {.mid = 0};
 // Returns the next message id.
 mid_t get_mid() {
   mid_t ret = mid;
-  mid.mid = (mid.mid + 1) % 16;
+  mid.mid = (mid.mid + 1) % 255;
   return ret;
 }
 
 // message type
-typedef enum {
+typedef enum __attribute__((__packed__)) {
   MTYPE_ACK = 0,
-  MTYPE_PING = 1,
-  MTYPE_PONG = 2,
-  MTYPE_TEXT = 3,
-  MTYPE_REQ = 4,
-  MTYPE_RES = 5,
-  MTYPE_RAW = 6,
+  MTYPE_HELLO = 1,
+  MTYPE_PING = 2,
+  MTYPE_PONG = 3,
+  MTYPE_TEXT = 4,
+  MTYPE_REQ = 5,
+  MTYPE_RES = 6,
+  MTYPE_RAW = 7,
 } mtype_t;
 
 // flags
@@ -78,7 +79,7 @@ typedef struct {
   bool hop_limit;
 } flags_t;
 
-typedef enum {
+typedef enum __attribute__((__packed__)) {
   INFO_VERSION = 0,
   INFO_BATTERY = 1,
   INFO_UPTIME = 2,
@@ -97,7 +98,7 @@ typedef struct {
   uid_t src;
   mid_t id;
   mtype_t mtype;
-  uint8_t data[2];
+  uint8_t data[3];
 } message_t;
 
 // Form a new ack message.
@@ -109,6 +110,18 @@ message_t new_ack_message(uid_t dst, mid_t mid) {
       .mtype = MTYPE_ACK,
       .data = {mid.mid, 0x00},
   };
+}
+
+// Form a new hello message.
+message_t new_hello_message() {
+  message_t msg = {
+      .dst = get_broadcast_uid(),
+      .src = get_uid(),
+      .id = get_mid(),
+      .mtype = MTYPE_HELLO,
+      .data = {0x00, 0x00},
+  };
+  return msg;
 }
 
 // Form a new ping message.

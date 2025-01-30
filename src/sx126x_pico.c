@@ -56,6 +56,11 @@ void handle_message(message_t *incoming) {
 
   if (incoming->mtype == MTYPE_ACK) {
     printf("ack: %d\n", incoming->data[0]);
+  } else if (incoming->mtype == MTYPE_HELLO) {
+    printf("hello\n");
+    tx_payload_buf = new_ack_message(incoming->src, incoming->id);
+    state = STATE_TX_READY;
+    return;
   } else if (incoming->mtype == MTYPE_PING) {
     printf("ping\n");
     tx_payload_buf = new_pong_message(incoming->src);
