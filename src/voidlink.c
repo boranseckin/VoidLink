@@ -138,7 +138,7 @@ void handle_rx_callback() {
   // Paint_ClearWindows(0, 106, 122, 122, WHITE);
   // char payload_buf_with_rx[buffer_status.pld_len_in_bytes + 4];
   // sprintf(payload_buf_with_rx, "rx: %s", rx_payload_buf);
-  // Paint_DrawString_EN(0, 106, (char *)payload_buf_with_rx, &Font16, BLACK, WHITE);
+  // Paint_DrawString(0, 106, (char *)payload_buf_with_rx, &Font16, BLACK, WHITE);
 
   // screen = SCREEN_DRAW_READY;
 
@@ -178,7 +178,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
     for (int i = 0; i < 3; i++) {
       Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
     }
-    Paint_DrawString_EN(0, 34 + cursor * 24, ">", &Font16, BLACK, WHITE);
+    Paint_DrawString(0, 34 + cursor * 24, ">", &Font16, BLACK, WHITE);
     screen = SCREEN_DRAW_READY;
   } else if (gpio == PIN_BUTTON_OK) {
     if (cursor == 0) {
@@ -415,13 +415,13 @@ void core1_entry() {
   Paint_Clear(WHITE);
 
   // Draw message selection screen
-  Paint_DrawString_EN(0, 10, "Select a message:", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 34, "1. Send Ping", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 58, "2. Send \"COPY\"", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 82, "3. Request version", &Font16, BLACK, WHITE);
+  Paint_DrawString(0, 10, "Select a message:", &Font16, BLACK, WHITE);
+  Paint_DrawString(20, 34, "1. Send Ping", &Font16, BLACK, WHITE);
+  Paint_DrawString(20, 58, "2. Send \"COPY\"", &Font16, BLACK, WHITE);
+  Paint_DrawString(20, 82, "3. Request version", &Font16, BLACK, WHITE);
 
   // Display cursor
-  Paint_DrawString_EN(0, 34, ">", &Font16, BLACK, WHITE);
+  Paint_DrawString(0, 34, ">", &Font16, BLACK, WHITE);
 
   screen = SCREEN_DRAW_READY;
 
