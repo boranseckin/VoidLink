@@ -1,13 +1,20 @@
-# sx126x-pico
+# VoidLink
 
-[sx126x driver](https://github.com/Lora-net/sx126x_driver/) port for raspberry pi pico
+An affordable and compact wireless communication device.
+VoidLink forms a decentralized network to relay relative position and critical information over long
+ranges with minimal power.
+
+Uses:
+
+- [sx126x driver](https://github.com/Lora-net/sx126x_driver/) from Semtech (ported for raspberry pi pico)
+- [Pico_ePaper_Code](https://github.com/waveshareteam/Pico_ePaper_Code) from Waveshare
 
 ## Usage
 
 1. Clone the repo including the driver library.
 
 ```bash
-git clone --recurse-submodules https://github.com/boranseckin/sx126x-pico.git
+git clone --recurse-submodules https://github.com/boranseckin/voidlink.git
 ```
 
 2. Install the [Pico C/C++ SDK](https://www.raspberrypi.com/documentation/microcontrollers/c_sdk.html).
@@ -26,12 +33,12 @@ make
 5. Load the firmware onto the target.
 
 ```bash
-picotool load sx126x_pico.uf2
+picotool load voidlink.uf2
 ```
 
 ## Pinout
 
-The default pinout diagram between sx126x and pico.
+The default pinout diagram between sx126x, eink display, buttons and pico.
 
 | T/X  | uC            | uC                  | T/X    |
 | ---- | ------------- | ------------------- | ------ |

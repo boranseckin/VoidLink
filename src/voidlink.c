@@ -15,8 +15,8 @@
 #include "GUI_Paint.h"
 
 #include "network.h"
-#include "sx126x_pico.h"
 #include "utils.h"
+#include "voidlink.h"
 
 static message_t rx_payload_buf;
 static message_t tx_payload_buf;

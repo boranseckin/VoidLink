@@ -28,22 +28,22 @@ set(PICO_BOARD pico CACHE STRING "Board type")
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(sx126x_pico C CXX ASM)
+project(voidlink C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-add_executable(sx126x_pico src/sx126x_pico.c)
+add_executable(voidlink src/voidlink.c)
 
-pico_set_program_name(sx126x_pico "sx126x_pico")
-pico_set_program_version(sx126x_pico "0.1")
+pico_set_program_name(voidlink "voidlink")
+pico_set_program_version(voidlink "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(sx126x_pico 0)
-pico_enable_stdio_usb(sx126x_pico 1)
+pico_enable_stdio_uart(voidlink 0)
+pico_enable_stdio_usb(voidlink 1)
 
 # Add the standard include files to the build
-target_include_directories(sx126x_pico PRIVATE
+target_include_directories(voidlink PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}
 )
 
@@ -82,7 +82,7 @@ target_sources(sx126x INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/src/pico/sx126x_hal_context.h
     ${CMAKE_CURRENT_LIST_DIR}/src/pico/sx126x_hal.c
 
-    ${CMAKE_CURRENT_LIST_DIR}/src/sx126x_pico.h
+    ${CMAKE_CURRENT_LIST_DIR}/src/voidlink.h
     ${CMAKE_CURRENT_LIST_DIR}/src/network.h
     ${CMAKE_CURRENT_LIST_DIR}/src/utils.h
 )
@@ -94,6 +94,6 @@ target_include_directories(sx126x INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/src/pico
 )
 
-target_link_libraries(sx126x_pico pico_stdlib pico_multicore hardware_spi sx126x ePaper GUI Fonts Config)
+target_link_libraries(voidlink pico_stdlib pico_multicore hardware_spi sx126x ePaper GUI Fonts Config)
 
-pico_add_extra_outputs(sx126x_pico)
+pico_add_extra_outputs(voidlink)
