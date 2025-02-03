@@ -50,6 +50,7 @@ target_include_directories(voidlink PRIVATE
 set(SX126X_PATH ${CMAKE_CURRENT_LIST_DIR}/lib/sx126x_driver)
 set(EPAPER_PATH ${CMAKE_CURRENT_LIST_DIR}/lib/epaper_driver)
 
+# ePaper driver
 add_subdirectory(${EPAPER_PATH}/Config)
 add_subdirectory(${EPAPER_PATH}/e-Paper)
 add_subdirectory(${EPAPER_PATH}/Fonts)
@@ -59,6 +60,7 @@ include_directories(${EPAPER_PATH}/Config)
 include_directories(${EPAPER_PATH}/e-Paper)
 include_directories(${EPAPER_PATH}/GUI)
 
+# SX126x driver
 add_library(sx126x INTERFACE)
 
 target_sources(sx126x INTERFACE
@@ -74,6 +76,7 @@ target_sources(sx126x INTERFACE
     ${SX126X_PATH}/src/sx126x.c
     ${SX126X_PATH}/src/sx126x.h
 
+    # Pico HAL files
     ${CMAKE_CURRENT_LIST_DIR}/src/pico/pico_config.h
     ${CMAKE_CURRENT_LIST_DIR}/src/pico/pico_gpio.h
     ${CMAKE_CURRENT_LIST_DIR}/src/pico/pico_gpio.c
@@ -81,10 +84,6 @@ target_sources(sx126x INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/src/pico/pico_spi.c
     ${CMAKE_CURRENT_LIST_DIR}/src/pico/sx126x_hal_context.h
     ${CMAKE_CURRENT_LIST_DIR}/src/pico/sx126x_hal.c
-
-    ${CMAKE_CURRENT_LIST_DIR}/src/voidlink.h
-    ${CMAKE_CURRENT_LIST_DIR}/src/network.h
-    ${CMAKE_CURRENT_LIST_DIR}/src/utils.h
 )
 
 target_include_directories(sx126x INTERFACE
@@ -94,6 +93,7 @@ target_include_directories(sx126x INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/src/pico
 )
 
+# Final link
 target_link_libraries(voidlink pico_stdlib pico_multicore hardware_spi sx126x ePaper GUI Fonts Config)
 
 pico_add_extra_outputs(voidlink)
