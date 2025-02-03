@@ -63,32 +63,16 @@ include_directories(${EPAPER_PATH}/GUI)
 # SX126x driver
 add_library(sx126x INTERFACE)
 
-target_sources(sx126x INTERFACE
-    ${SX126X_PATH}/src/lr_fhss_mac.c
-    ${SX126X_PATH}/src/lr_fhss_mac.h
-    ${SX126X_PATH}/src/lr_fhss_v1_base_types.h
-    ${SX126X_PATH}/src/sx126x_driver_version.c
-    ${SX126X_PATH}/src/sx126x_driver_version.h
-    ${SX126X_PATH}/src/sx126x_hal.h
-    ${SX126X_PATH}/src/sx126x_lr_fhss.c
-    ${SX126X_PATH}/src/sx126x_lr_fhss.h
-    ${SX126X_PATH}/src/sx126x_regs.h
-    ${SX126X_PATH}/src/sx126x.c
-    ${SX126X_PATH}/src/sx126x.h
+FILE(GLOB_RECURSE SX126X_SRC_FILES ${SX126X_PATH}/src/*.c)
+FILE(GLOB_RECURSE SX126X_HAL_FILES ${CMAKE_CURRENT_LIST_DIR}/src/pico/*.c)
 
-    # Pico HAL files
-    ${CMAKE_CURRENT_LIST_DIR}/src/pico/pico_config.h
-    ${CMAKE_CURRENT_LIST_DIR}/src/pico/pico_gpio.h
-    ${CMAKE_CURRENT_LIST_DIR}/src/pico/pico_gpio.c
-    ${CMAKE_CURRENT_LIST_DIR}/src/pico/pico_spi.h
-    ${CMAKE_CURRENT_LIST_DIR}/src/pico/pico_spi.c
-    ${CMAKE_CURRENT_LIST_DIR}/src/pico/sx126x_hal_context.h
-    ${CMAKE_CURRENT_LIST_DIR}/src/pico/sx126x_hal.c
+target_sources(sx126x INTERFACE
+    ${SX126X_SRC_FILES}
+    ${SX126X_HAL_FILES}
 )
 
 target_include_directories(sx126x INTERFACE
     ${SX126X_PATH}/src
-
     ${CMAKE_CURRENT_LIST_DIR}/src/
     ${CMAKE_CURRENT_LIST_DIR}/src/pico
 )
