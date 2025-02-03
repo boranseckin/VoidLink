@@ -1,5 +1,15 @@
+/**
+ * Network Protocol
+ *
+ * This protocol uses big-endian encoding for multi-byte fields.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
+
+// Bump these versions according to the changes made.
+#define VERSION_MAJOR 0
+#define VERSION_MINOR 1
 
 // 16 predefined text messages
 const char *text[] = {
@@ -75,8 +85,8 @@ typedef enum __attribute__((__packed__)) {
 
 // flags
 typedef struct {
-  bool ack_req;
-  bool hop_limit;
+  bool ack_req : 1;
+  bool hop_limit : 1;
 } flags_t;
 
 typedef enum __attribute__((__packed__)) {
@@ -98,6 +108,7 @@ typedef struct {
   uid_t src;
   mid_t id;
   mtype_t mtype;
+  flags_t flags;
   uint8_t data[3];
 } message_t;
 
@@ -108,7 +119,8 @@ message_t new_ack_message(uid_t dst, mid_t mid) {
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_ACK,
-      .data = {mid.mid, 0x00},
+      .flags = {.ack_req = false, .hop_limit = false},
+      .data = {mid.mid, 0x00, 0x00},
   };
 }
 
@@ -119,7 +131,8 @@ message_t new_hello_message() {
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_HELLO,
-      .data = {0x00, 0x00},
+      .flags = {.ack_req = false, .hop_limit = false},
+      .data = {0x00, 0x00, 0x00},
   };
   return msg;
 }
@@ -131,7 +144,8 @@ message_t new_ping_message(uid_t dst) {
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_PING,
-      .data = {0x00, 0x00},
+      .flags = {.ack_req = false, .hop_limit = false},
+      .data = {0x00, 0x00, 0x00},
   };
   return msg;
 }
@@ -143,7 +157,8 @@ message_t new_pong_message(uid_t dst) {
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_PONG,
-      .data = {0x00, 0x00},
+      .flags = {.ack_req = false, .hop_limit = false},
+      .data = {0x00, 0x00, 0x00},
   };
   return msg;
 }
@@ -155,7 +170,8 @@ message_t new_text_message(uid_t dst, text_id_t id) {
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_TEXT,
-      .data = {id, 0x00},
+      .flags = {.ack_req = false, .hop_limit = false},
+      .data = {id, 0x00, 0x00},
   };
   return msg;
 }
@@ -167,31 +183,34 @@ message_t new_request_message(uid_t dst, info_key_t key) {
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_REQ,
-      .data = {key, 0x00},
+      .flags = {.ack_req = false, .hop_limit = false},
+      .data = {key, 0x00, 0x00},
   };
   return msg;
 }
 
 // Form a new response message.
-message_t new_response_message(uid_t dst, info_key_t key, uint8_t value) {
+message_t new_response_message(uid_t dst, info_key_t key, uint16_t value) {
   message_t msg = {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_RES,
-      .data = {key, value},
+      .flags = {.ack_req = false, .hop_limit = false},
+      .data = {key, (value >> 8) & 0xFF, (value & 0xFF)},
   };
   return msg;
 }
 
 // Form a new raw message.
-message_t new_raw_message(uid_t dst, uint8_t *data[2]) {
+message_t new_raw_message(uid_t dst, uint8_t *data[3]) {
   message_t msg = {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_RAW,
+      .flags = {.ack_req = false, .hop_limit = false},
   };
-  memcpy(msg.data, data, 2);
+  memcpy(msg.data, data, 3);
   return msg;
 }

@@ -73,16 +73,17 @@ void handle_message(message_t *incoming) {
   } else if (incoming->mtype == MTYPE_REQ) {
     printf("request: %d\n", incoming->data[0]);
     if (incoming->data[0] == INFO_VERSION) {
-      tx_payload_buf = new_response_message(incoming->src, INFO_VERSION, 1);
+      tx_payload_buf =
+          new_response_message(incoming->src, INFO_VERSION, VERSION_MAJOR << 8 | VERSION_MINOR);
     } else {
       tx_payload_buf = new_response_message(incoming->src, incoming->data[0], 0);
     }
     state = STATE_TX_READY;
     return;
   } else if (incoming->mtype == MTYPE_RES) {
-    printf("response: %d %d\n", incoming->data[0], incoming->data[1]);
+    printf("response: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
   } else if (incoming->mtype == MTYPE_RAW) {
-    printf("raw: %d %d\n", incoming->data[0], incoming->data[1]);
+    printf("raw: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
   }
 
   state = STATE_RX;
