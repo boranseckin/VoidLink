@@ -142,6 +142,13 @@ void handle_rx_callback() {
 
   // screen = SCREEN_DRAW_READY;
 
+  // Get the packet status to learn the signal strength of the received message.
+  sx126x_pkt_status_lora_t pkt_status = {0};
+  sx126x_get_lora_pkt_status(&context, &pkt_status);
+
+  // Update the neighbour table with the information from received message.
+  update_neighbour(rx_payload_buf.src, pkt_status.signal_rssi_pkt_in_dbm);
+
   // Handle the received message.
   handle_message(&rx_payload_buf);
 }

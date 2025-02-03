@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "hardware/timer.h"
+
 // Bump these versions according to the changes made.
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 1
@@ -214,3 +216,46 @@ message_t new_raw_message(uid_t dst, uint8_t *data[3]) {
   memcpy(msg.data, data, 3);
   return msg;
 }
+
+// Neighbour table
+#define MAX_NEIGHBOURS 16
+
+typedef struct {
+  uid_t uid;
+  int8_t rssi;
+  absolute_time_t last_seen;
+} neighbour_t;
+
+typedef struct {
+  neighbour_t neighbours[MAX_NEIGHBOURS];
+  uint8_t count;
+} neighbour_table_t;
+
+static neighbour_table_t neighbour_table = {.neighbours = {0}, .count = 0};
+
+// Update (or add) a neighbour to the table.
+void update_neighbour(uid_t uid, int8_t rssi) {
+  for (int i = 0; i < neighbour_table.count; i++) {
+    if (memcmp(&neighbour_table.neighbours[i].uid, &uid, sizeof(uid_t)) == 0) {
+      neighbour_table.neighbours[i].rssi = rssi;
+      neighbour_table.neighbours[i].last_seen = get_absolute_time();
+      debug("neighbour %s updated (rssi: %d, ts: %dms)\n", uid_to_string(uid), rssi,
+            to_ms_since_boot(neighbour_table.neighbours[neighbour_table.count - 1].last_seen));
+      return;
+    }
+  }
+
+  if (neighbour_table.count >= MAX_NEIGHBOURS) {
+    error("neighbour table full\n");
+    return;
+  }
+
+  neighbour_table.neighbours[neighbour_table.count].uid = uid;
+  neighbour_table.neighbours[neighbour_table.count].rssi = rssi;
+  neighbour_table.neighbours[neighbour_table.count].last_seen = get_absolute_time();
+  neighbour_table.count++;
+  debug("neighbour %s added (rssi: %d, ts: %dms)\n", uid_to_string(uid), rssi,
+        to_ms_since_boot(neighbour_table.neighbours[neighbour_table.count - 1].last_seen));
+}
+
+// TODO: periodic cleanup of the neighbour table
