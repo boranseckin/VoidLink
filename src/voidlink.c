@@ -1,9 +1,9 @@
 #include <stdio.h>
 
-#include "hardware/flash.h"
 #include "hardware/uart.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
+#include "pico/unique_id.h"
 #include "tusb.h"
 
 #include "pico_config.h"
@@ -166,6 +166,7 @@ void handle_dio1_callback(uint gpio, uint32_t events) {
 
   sx126x_print_decoded_irq(irq);
 
+  // TODO: handle multiple interrupts at the same time
   if (irq == SX126X_IRQ_TX_DONE) {
     handle_tx_callback();
   } else if (irq == SX126X_IRQ_RX_DONE) {
@@ -329,12 +330,14 @@ void setup_sx126x() {
 }
 
 void setup_network() {
+  // it seems trying to read the unique id too early causes a crash
   sleep_ms(100);
-  uint8_t bytes[8] = {0};
-  flash_get_unique_id(bytes);
-  MY_UID.bytes[0] = bytes[5];
-  MY_UID.bytes[1] = bytes[6];
-  MY_UID.bytes[2] = bytes[7];
+
+  pico_unique_board_id_t board_id;
+  pico_get_unique_board_id(&board_id);
+  MY_UID.bytes[0] = board_id.id[5];
+  MY_UID.bytes[1] = board_id.id[6];
+  MY_UID.bytes[2] = board_id.id[7];
 
   debug("network setup done\n");
 }
