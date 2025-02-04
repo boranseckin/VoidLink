@@ -266,7 +266,7 @@ void update_neighbour(uid_t uid, int8_t rssi) {
 // Keep track of received message ids and src.
 #define MAX_MESSAGE_HISTORY 16
 
-// TODO: handle reboot and mid resets
+// TODO: handle reboot and mid resets, maybe add salt to message
 typedef struct {
   uid_t src;
   mid_t id;

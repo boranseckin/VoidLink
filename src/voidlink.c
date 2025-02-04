@@ -206,6 +206,39 @@ void handle_irq_callback(uint gpio, uint32_t events) {
   }
 }
 
+// USB uart RX callback
+void tud_cdc_rx_cb(uint8_t itf) {
+  // keep reading into a static buffer until carriage return
+  static char buf[64];
+  static uint8_t len = 0;
+
+  while (tud_cdc_available()) {
+    char c = tud_cdc_read_char();
+    if (c == '\r') {
+      buf[len] = 0;
+      len = 0;
+
+      if (strncmp(buf, "ping", 4) == 0) {
+        if (strlen(buf) == 4) {
+          tx_payload_buf = new_ping_message(get_broadcast_uid());
+        } else {
+          uid_t dst = {.bytes = {0x00, 0x00, 0x00}};
+          sscanf(buf + 5, "%02hhx:%02hhx:%02hhx", &dst.bytes[0], &dst.bytes[1], &dst.bytes[2]);
+          tx_payload_buf = new_ping_message(dst);
+        }
+        state = STATE_TX_READY;
+      }
+
+      tud_cdc_write_char('\n');
+      tud_cdc_write_flush();
+    } else {
+      buf[len++] = c;
+      tud_cdc_write_char(c);
+      tud_cdc_write_flush();
+    }
+  }
+}
+
 void setup_io() {
   // Initialize the uart for printing from the pico.
   stdio_init_all();
@@ -488,5 +521,8 @@ int main() {
         screen = SCREEN_IDLE;
       }
     }
+
+    // USB uart RX callback job
+    tud_task();
   }
 }
