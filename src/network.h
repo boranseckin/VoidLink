@@ -1,3 +1,6 @@
+#ifndef NETWORK_H
+#define NETWORK_H
+
 /**
  * Network Protocol
  *
@@ -259,3 +262,36 @@ void update_neighbour(uid_t uid, int8_t rssi) {
 }
 
 // TODO: periodic cleanup of the neighbour table
+
+// Keep track of received message ids and src.
+#define MAX_MESSAGE_HISTORY 16
+
+// TODO: handle reboot and mid resets
+typedef struct {
+  uid_t src;
+  mid_t id;
+} history_entry_t;
+
+// cyclic buffer of received messages
+static history_entry_t message_history[MAX_MESSAGE_HISTORY] = {0};
+static uint8_t message_history_head = 0;
+
+// Check if a message is already received.
+bool check_message_history(uid_t src, mid_t id) {
+  for (int i = 0; i < MAX_MESSAGE_HISTORY; i++) {
+    if (memcmp(&message_history[i].src, &src, sizeof(uid_t)) == 0 &&
+        memcmp(&message_history[i].id, &id, sizeof(mid_t)) == 0) {
+      debug("message %d from %s already received\n", id.mid, uid_to_string(src));
+      return true;
+    }
+  }
+
+  message_history[message_history_head].src = src;
+  message_history[message_history_head].id = id;
+  message_history_head = (message_history_head + 1) % MAX_MESSAGE_HISTORY;
+  debug("message %d from %s added to history\n", id.mid, uid_to_string(src));
+
+  return false;
+}
+
+#endif // NETWORK_H

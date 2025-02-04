@@ -51,27 +51,27 @@ static sx126x_hal_context_t context;
 
 // Handle a received message.
 void handle_message(message_t *incoming) {
-  printf("   message received from %s", uid_to_string(incoming->src));
-  printf(" to %s ", uid_to_string(incoming->dst));
+  printf("message received from %s", uid_to_string(incoming->src));
+  printf(" to %s\n", uid_to_string(incoming->dst));
 
   if (incoming->mtype == MTYPE_ACK) {
-    printf("ack: %d\n", incoming->data[0]);
+    printf("rx: ack: %d\n", incoming->data[0]);
   } else if (incoming->mtype == MTYPE_HELLO) {
-    printf("hello\n");
+    printf("rx: hello\n");
     tx_payload_buf = new_ack_message(incoming->src, incoming->id);
     state = STATE_TX_READY;
     return;
   } else if (incoming->mtype == MTYPE_PING) {
-    printf("ping\n");
+    printf("rx: ping\n");
     tx_payload_buf = new_pong_message(incoming->src);
     state = STATE_TX_READY;
     return;
   } else if (incoming->mtype == MTYPE_PONG) {
-    printf("pong\n");
+    printf("rx: pong\n");
   } else if (incoming->mtype == MTYPE_TEXT) {
-    printf("text: %s\n", text[incoming->data[0]]);
+    printf("rx: text: %s\n", text[incoming->data[0]]);
   } else if (incoming->mtype == MTYPE_REQ) {
-    printf("request: %d\n", incoming->data[0]);
+    printf("rx: request: %d\n", incoming->data[0]);
     if (incoming->data[0] == INFO_VERSION) {
       tx_payload_buf =
           new_response_message(incoming->src, INFO_VERSION, VERSION_MAJOR << 8 | VERSION_MINOR);
@@ -81,9 +81,9 @@ void handle_message(message_t *incoming) {
     state = STATE_TX_READY;
     return;
   } else if (incoming->mtype == MTYPE_RES) {
-    printf("response: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
+    printf("rx: response: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
   } else if (incoming->mtype == MTYPE_RAW) {
-    printf("raw: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
+    printf("rx: raw: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
   }
 
   state = STATE_RX;
@@ -139,7 +139,6 @@ void handle_rx_callback() {
   // char payload_buf_with_rx[buffer_status.pld_len_in_bytes + 4];
   // sprintf(payload_buf_with_rx, "rx: %s", rx_payload_buf);
   // Paint_DrawString(0, 106, (char *)payload_buf_with_rx, &Font16, BLACK, WHITE);
-
   // screen = SCREEN_DRAW_READY;
 
   // Get the packet status to learn the signal strength of the received message.
@@ -148,6 +147,11 @@ void handle_rx_callback() {
 
   // Update the neighbour table with the information from received message.
   update_neighbour(rx_payload_buf.src, pkt_status.signal_rssi_pkt_in_dbm);
+
+  // Update the message history with the received message.
+  if (check_message_history(rx_payload_buf.src, rx_payload_buf.id)) {
+    return;
+  }
 
   // Handle the received message.
   handle_message(&rx_payload_buf);
@@ -342,7 +346,7 @@ void print_hello() {
          "  \\ \\/ / _ \\| |/ _` | |    | | '_ \\| |/ / \n"
          "   \\  / (_) | | (_| | |____| | | | |   <  \n"
          "    \\/ \\___/|_|\\__,_|______|_|_| |_|_|\\_\\ \n"
-         "     version: %d.%d | %s is ready\n",
+         "     version: %d.%d       %s is ready\n",
          VERSION_MAJOR, VERSION_MINOR, uid_to_string(get_uid()));
 }
 
@@ -387,7 +391,7 @@ void transmit_packet(message_t *packet) {
   }
   printf("\n");
 
-  printf("   message sent from %s", uid_to_string(packet->src));
+  printf("message sent from %s", uid_to_string(packet->src));
   printf(" to %s\n", uid_to_string(packet->dst));
 
   transmit_bytes((uint8_t *)packet, sizeof(message_t));
