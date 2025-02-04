@@ -42,6 +42,10 @@ pico_set_program_version(voidlink "0.1")
 pico_enable_stdio_uart(voidlink 0)
 pico_enable_stdio_usb(voidlink 1)
 
+FILE(GLOB_RECURSE VOIDLINK_SRC_FILES ${CMAKE_CURRENT_LIST_DIR}/src/*.c)
+
+target_sources(voidlink PRIVATE ${VOIDLINK_SRC_FILES})
+
 # Add the standard include files to the build
 target_include_directories(voidlink PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}
@@ -73,7 +77,6 @@ target_sources(sx126x INTERFACE
 
 target_include_directories(sx126x INTERFACE
     ${SX126X_PATH}/src
-    ${CMAKE_CURRENT_LIST_DIR}/src/
     ${CMAKE_CURRENT_LIST_DIR}/src/pico
 )
 

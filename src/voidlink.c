@@ -8,7 +8,6 @@
 
 #include "pico_config.h"
 #include "sx126x.h"
-#include "sx126x_debug.h"
 #include "sx126x_hal_context.h"
 
 #include "EPD_2in13_V4.h"

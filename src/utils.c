@@ -1,15 +1,8 @@
 #include <stdio.h>
 
 #include "sx126x.h"
-#include "utils.h"
 
-const char *STATUS[] = {
-    "RESERVED",         "RFU",        "DATA_AVAILABLE", "CMD_TIMEOUT", "CMD_PROCESS_ERROR",
-    "CMD_EXEC_FAILURE", "CMD_TX_DONE"};
-const char *CHIP_MODES[] = {"UNUSED", "RFU", "STBY_RC", "STBY_XOSC", "FS", "RX", "TX"};
-const char *ERRORS[] = {
-    "RC64K_CALIBRATION", "RC13M_CALIBRATION", "PLL_CALIBRATION", "ADC_CALIBRATION",
-    "IMG_CALIBRATION",   "XOSC_START",        "PLL_LOCK",        "PA_RAMP"};
+#include "utils.h"
 
 void sx126x_check(const void *context) {
   sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
