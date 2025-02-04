@@ -39,8 +39,8 @@ typedef struct {
 } uid_t;
 
 // must call setup first
-static uid_t MY_UID = {.bytes = {0x00, 0x00, 0x00}};
-static uid_t BROADCAST_UID = {.bytes = {0xFF, 0xFF, 0xFF}};
+extern uid_t MY_UID;
+extern uid_t BROADCAST_UID;
 
 uid_t get_uid();
 uid_t get_broadcast_uid();

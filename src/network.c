@@ -14,6 +14,9 @@
 #include "network.h"
 #include "utils.h"
 
+uid_t MY_UID = {.bytes = {0x00, 0x00, 0x00}};
+uid_t BROADCAST_UID = {.bytes = {0xFF, 0xFF, 0xFF}};
+
 // Returns the unique id of the device.
 uid_t get_uid() { return MY_UID; }
 
