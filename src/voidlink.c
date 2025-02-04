@@ -335,6 +335,17 @@ void setup_network() {
   debug("network setup done\n");
 }
 
+void print_hello() {
+  printf("__      __   _     _ _      _       _     \n"
+         "\\ \\    / /  (_)   | | |    (_)     | |    \n"
+         " \\ \\  / /__  _  __| | |     _ _ __ | | __ \n"
+         "  \\ \\/ / _ \\| |/ _` | |    | | '_ \\| |/ / \n"
+         "   \\  / (_) | | (_| | |____| | | | |   <  \n"
+         "    \\/ \\___/|_|\\__,_|______|_|_| |_|_|\\_\\ \n"
+         "     version: %d.%d | %s is ready\n",
+         VERSION_MAJOR, VERSION_MINOR, uid_to_string(get_uid()));
+}
+
 // Transmit bytes over the radio.
 void transmit_bytes(uint8_t *bytes, uint8_t length) {
   if (length > 255) {
@@ -449,7 +460,7 @@ int main() {
 
   multicore_launch_core1(core1_entry);
 
-  printf("%s is ready\n", uid_to_string(get_uid()));
+  print_hello();
 
   while (true) {
     if (state == STATE_TX_READY) {
