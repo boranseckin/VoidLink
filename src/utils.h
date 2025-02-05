@@ -3,7 +3,7 @@
 
 #include "sx126x.h"
 
-#define DEBUG
+// #define DEBUG
 
 // only print if DEBUG is enabled
 #ifdef DEBUG
@@ -13,8 +13,6 @@
 #endif
 
 #define error(...) printf(__VA_ARGS__)
-
-#define debug(...) printf(__VA_ARGS__)
 
 static const char *STATUS[] = {
     "RESERVED",         "RFU",        "DATA_AVAILABLE", "CMD_TIMEOUT", "CMD_PROCESS_ERROR",
