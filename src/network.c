@@ -29,6 +29,9 @@ char *uid_to_string(uid_t uid) {
   return str;
 }
 
+bool is_my_uid(uid_t uid) { return memcmp(&uid, &MY_UID, sizeof(uid_t)) == 0; }
+bool is_broadcast(uid_t uid) { return memcmp(&uid, &BROADCAST_UID, sizeof(uid_t)) == 0; }
+
 // Returns the next message id.
 mid_t get_mid() {
   mid_t ret = mid;

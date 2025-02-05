@@ -126,11 +126,11 @@ void handle_rx_callback() {
   sx126x_read_buffer(&context, buffer_status.buffer_start_pointer, (uint8_t *)&rx_payload_buf,
                      buffer_status.pld_len_in_bytes);
 
-  printf("<-");
+  debug("<-");
   for (int i = 0; i < buffer_status.pld_len_in_bytes; i++) {
-    printf(" %d", ((uint8_t *)&rx_payload_buf)[i]);
+    debug(" %d", ((uint8_t *)&rx_payload_buf)[i]);
   }
-  printf("\n");
+  debug("\n");
 
   // Draw the received message on the e-paper display.
   // add "rx: " to the beginning of the payload
@@ -149,6 +149,12 @@ void handle_rx_callback() {
 
   // Update the message history with the received message.
   if (check_message_history(rx_payload_buf.src, rx_payload_buf.id)) {
+    return;
+  }
+
+  // Check if the received message is for us.
+  if (!is_broadcast(rx_payload_buf.dst) && !is_my_uid(rx_payload_buf.dst)) {
+    debug("message not for me\n");
     return;
   }
 

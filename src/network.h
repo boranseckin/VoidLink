@@ -47,6 +47,9 @@ uid_t get_broadcast_uid();
 
 char *uid_to_string(uid_t uid);
 
+bool is_my_uid(uid_t uid);
+bool is_broadcast(uid_t uid);
+
 // mid 4 bit int
 typedef struct {
   uint8_t mid;
