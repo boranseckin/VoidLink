@@ -148,7 +148,7 @@ void handle_rx_callback() {
   update_neighbour(rx_payload_buf.src, pkt_status.signal_rssi_pkt_in_dbm);
 
   // Update the message history with the received message.
-  if (check_message_history(rx_payload_buf.src, rx_payload_buf.id)) {
+  if (check_message_history(rx_payload_buf)) {
     return;
   }
 
@@ -426,14 +426,14 @@ void transmit_bytes(uint8_t *bytes, uint8_t length) {
 void transmit_string(char *string) { transmit_bytes((uint8_t *)string, strlen(string)); }
 
 void transmit_packet(message_t *packet) {
-  printf("->");
+  debug("->");
   for (int i = 0; i < sizeof(message_t); i++) {
-    printf(" %d", ((uint8_t *)packet)[i]);
+    debug(" %d", ((uint8_t *)packet)[i]);
   }
-  printf("\n");
+  debug("\n");
 
-  printf("message sent from %s", uid_to_string(packet->src));
-  printf(" to %s\n", uid_to_string(packet->dst));
+  debug("message sent from %s", uid_to_string(packet->src));
+  debug(" to %s\n", uid_to_string(packet->dst));
 
   transmit_bytes((uint8_t *)packet, sizeof(message_t));
 }

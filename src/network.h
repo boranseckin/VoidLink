@@ -133,16 +133,12 @@ void update_neighbour(uid_t uid, int8_t rssi);
 #define MAX_MESSAGE_HISTORY 16
 
 // TODO: handle reboot and mid resets, maybe add salt to message
-typedef struct {
-  uid_t src;
-  mid_t id;
-} history_entry_t;
 
 // cyclic buffer of received messages
-static history_entry_t message_history[MAX_MESSAGE_HISTORY] = {0};
+static message_t message_history[MAX_MESSAGE_HISTORY] = {0};
 static uint8_t message_history_head = 0;
 
 // Check if a message is already received.
-bool check_message_history(uid_t src, mid_t id);
+bool check_message_history(message_t msg);
 
 #endif // NETWORK_H

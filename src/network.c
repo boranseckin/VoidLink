@@ -170,19 +170,19 @@ void update_neighbour(uid_t uid, int8_t rssi) {
 // TODO: periodic cleanup of the neighbour table
 
 // Check if a message is already received.
-bool check_message_history(uid_t src, mid_t id) {
+bool check_message_history(message_t msg) {
   for (int i = 0; i < MAX_MESSAGE_HISTORY; i++) {
-    if (memcmp(&message_history[i].src, &src, sizeof(uid_t)) == 0 &&
-        memcmp(&message_history[i].id, &id, sizeof(mid_t)) == 0) {
-      debug("message %d from %s already received\n", id.mid, uid_to_string(src));
+    // TODO: consider the case where a node reboots and loses the mid counter
+    if (memcmp(&message_history[i].src, &msg.src, sizeof(uid_t)) == 0 &&
+        memcmp(&message_history[i].id, &msg.id, sizeof(mid_t)) == 0) {
+      debug("message %d from %s already received\n", msg.id.mid, uid_to_string(msg.src));
       return true;
     }
   }
 
-  message_history[message_history_head].src = src;
-  message_history[message_history_head].id = id;
+  message_history[message_history_head] = msg;
   message_history_head = (message_history_head + 1) % MAX_MESSAGE_HISTORY;
-  debug("message %d from %s added to history\n", id.mid, uid_to_string(src));
+  debug("message %d from %s added to history\n", msg.id.mid, uid_to_string(msg.src));
 
   return false;
 }
