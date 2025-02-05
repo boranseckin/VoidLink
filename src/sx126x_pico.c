@@ -12,15 +12,26 @@
 
 #include "EPD_2in13_V4.h"
 #include "GUI_Paint.h"
+#include "hardware/timer.h"
 
 #define PAYLOAD_BUFFER_SIZE 255
+
 static uint8_t payload_buf[PAYLOAD_BUFFER_SIZE];
 
 // ((EPD_2in13_V4_WIDTH % 8 == 0) ? (EPD_2in13_V4_WIDTH / 8) : (EPD_2in13_V4_WIDTH / 8 + 1)) *
 // EPD_2in13_V4_HEIGHT = 4080
 #define IMAGE_SIZE 4080
 static uint8_t image[IMAGE_SIZE];
+static uint8_t wakeup[IMAGE_SIZE];
 static uint8_t cursor = 0;
+alarm_id_t alarm_id;
+int refresh_Counter = 0;
+volatile bool five_Seconds = true;
+static uint32_t display_Timeout = 7000;
+//character array to store received messages
+char saved_Messages[5][PAYLOAD_BUFFER_SIZE + 4];
+//number of messages received
+int msg_Number = 0;
 
 static char *messages[] = {
     "Hello",
@@ -47,6 +58,16 @@ typedef enum {
 } screen_t;
 
 static screen_t screen = SCREEN_IDLE;
+
+// display screens state machine
+typedef enum {
+  DISPLAY_HOME,
+  DISPLAY_MSG,
+  DISPLAY_NEIGHBOURS,
+  DISPLAY_SETTINGS,
+} display_t;
+
+static display_t display = DISPLAY_HOME;
 
 static sx126x_hal_context_t context;
 
@@ -96,10 +117,15 @@ void handle_rx_callback() {
 
   // Draw the received message on the e-paper display.
   // add "rx: " to the beginning of the payload
-  Paint_ClearWindows(0, 106, 122, 122, WHITE);
+  //Paint_ClearWindows(0, 106, 122, 122, WHITE);
   char payload_buf_with_rx[buffer_status.pld_len_in_bytes + 4];
   sprintf(payload_buf_with_rx, "rx: %s", payload_buf);
-  Paint_DrawString_EN(0, 106, (char *)payload_buf_with_rx, &Font16, BLACK, WHITE);
+  //add received message to saved messages array
+  saved_Messages[msg_Number][buffer_status.pld_len_in_bytes + 4] = payload_buf_with_rx;
+  //Paint_DrawString_EN(0, 106, (char *)payload_buf_with_rx, &Font16, BLACK, WHITE);
+  //increment message number (will be replaced with network code varaible)
+  msg_Number++;
+  // Trigger an LED blink to signify a message has been received.
 
   screen = SCREEN_DRAW_READY;
   state = STATE_RX;
@@ -121,20 +147,150 @@ void handle_dio1_callback(uint gpio, uint32_t events) {
   }
 }
 
+void msg_Screen(){
+  // Create a new display buffer
+  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  // Paint the whole frame white
+  Paint_Clear(WHITE);
+
+  // Draw message selection screen
+  Paint_DrawString_EN(0, 10, "Select a message:", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 34, "1. Hello", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 58, "2. Yes", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 82, "3. No", &Font16, BLACK, WHITE);
+  //Paint_DrawString_EN(20, 106, "4. On my way!", &Font16, BLACK, WHITE);
+
+  // Display cursor
+  Paint_DrawString_EN(0, 34, ">", &Font16, BLACK, WHITE);
+}
+
+void neighbours_Screen(){
+  // Create a new display buffer
+  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  // Paint the whole frame white
+  Paint_Clear(WHITE);
+
+  // Draw message selection screen
+  Paint_DrawString_EN(0, 10, "Received Messages:", &Font16, BLACK, WHITE);
+  for (int i = 0; i < msg_Number; i++){
+    Paint_DrawString_EN(0, 34 + i * 24, saved_Messages[i], &Font16, BLACK, WHITE);
+  }
+}
+
+void home_Screen(){
+  // Create a new display buffer
+  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  // Paint the whole frame white
+  Paint_Clear(WHITE);
+
+  // Draw message selection screen
+  Paint_DrawString_EN(0, 10, "Home:", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 34, "1. Send Message", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 58, "2. Received Messages", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 82, "3. Settings", &Font16, BLACK, WHITE);
+
+  // Display cursor
+  Paint_DrawString_EN(0, 34, ">", &Font16, BLACK, WHITE);
+}
+
+void settings_Screen(){
+  // Create a new display buffer
+  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  // Paint the whole frame white
+  Paint_Clear(WHITE);
+
+  // Draw message selection screen
+  Paint_DrawString_EN(0, 10, "Settings:", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 34, "1. Display Timeout", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 58, "2. Network Settings", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(20, 82, "3. Mode", &Font16, BLACK, WHITE);
+
+  // Display cursor
+  Paint_DrawString_EN(0, 34, ">", &Font16, BLACK, WHITE);
+}
+
 void handle_button_callback(uint gpio, uint32_t events) {
   if (screen != SCREEN_IDLE || (state != STATE_IDLE && state != STATE_RX))
     return;
 
-  if (gpio == PIN_BUTTON_NEXT) {
-    cursor = (cursor + 1) % 3;
-    for (int i = 0; i < 3; i++) {
-      Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
-    }
-    Paint_DrawString_EN(0, 34 + cursor * 24, ">", &Font16, BLACK, WHITE);
-    screen = SCREEN_DRAW_READY;
+  if (gpio == PIN_BUTTON_NEXT) {// add switch cases for each state
+    switch (display) {
+      case DISPLAY_HOME:
+          printf("On Home Screen.\n"); //For testing purposes
+          // Add selection drawings for home screen
+          break;
+
+      case DISPLAY_MSG:
+          printf("On Message Screen.\n"); //For testing purposes
+          cursor = (cursor + 1) % 3;
+          for (int i = 0; i < 3; i++) {
+            Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
+          }
+          Paint_DrawString_EN(0, 34 + cursor * 24, ">", &Font16, BLACK, WHITE);
+          screen = SCREEN_DRAW_READY;
+          break;
+
+      case DISPLAY_SETTINGS:
+          printf("On Settings Screen.\n"); //For testing purposes
+          // Add selection drawings for settings screen
+          break;
+
+      case DISPLAY_NEIGHBOURS:
+          printf("On Neighbours Screen.\n"); //For testing purposes
+          // Add selection drawings for neighbours screen
+          break;
+      }
   } else if (gpio == PIN_BUTTON_OK) {
-    state = STATE_TX_READY;
+    switch (display) {
+      case DISPLAY_HOME:
+          //printf("On Home Screen."); //For testing purposes
+          // Add selection drawings for home screen
+          display = DISPLAY_MSG;
+          msg_Screen();
+          refresh_Counter = 15;
+          screen = SCREEN_DRAW_READY;
+          break;
+
+      case DISPLAY_MSG:
+          //printf("Send Msg."); //For testing purposes
+          state = STATE_TX_READY;
+          break;
+
+      case DISPLAY_SETTINGS:
+          //printf("On Settings Screen."); //For testing purposes
+          // Add selection drawings for settings screen
+          break;
+
+      case DISPLAY_NEIGHBOURS:
+          //printf("On Neighbours Screen."); //For testing purposes
+          // Add selection drawings for neighbours screen
+          break;
+      }
   } else if (gpio == PIN_BUTTON_BACK) {
+    switch (display) {
+      case DISPLAY_HOME:
+          printf("Already at home\n"); //For testing purposes
+          // Add selection drawings for home screen
+          break;
+
+      case DISPLAY_MSG:
+          //printf("Send Msg."); //For testing purposes
+          display = DISPLAY_HOME;
+          home_Screen();
+          refresh_Counter = 15;
+          screen = SCREEN_DRAW_READY;
+          break;
+
+      case DISPLAY_SETTINGS:
+          //printf("On Settings Screen."); //For testing purposes
+          // Add selection drawings for settings screen
+          break;
+
+      case DISPLAY_NEIGHBOURS:
+          //printf("On Neighbours Screen."); //For testing purposes
+          // Add selection drawings for neighbours screen
+          break;
+      }
   }
 }
 
@@ -321,33 +477,69 @@ void receive_cont() {
   sx126x_set_rx_with_timeout_in_rtc_step(&context, SX126X_RX_CONTINUOUS);
 }
 
-void core1_entry() {
+// Function to be called after 5 seconds if the flag isn't set
+int64_t alarm_callback(alarm_id_t id, void *user_data) {
+  five_Seconds = true;
+  printf("7 Seconds of inactivity, sleeping display.\n");
+  EPD_2in13_V4_Sleep();
+  sleep_ms(100);
+  return 0; // Returning 0 cancels the alarm
+}
+
+// Function to reset the alarm when the flag is set
+void set_flag_and_reset_alarm() {
+    printf("Flag set! Resetting alarm.\n");
+    // Cancel the previous alarm
+    cancel_alarm(alarm_id);
+    // Reset flag and start a new alarm
+    five_Seconds = false;
+    alarm_id = add_alarm_in_ms(display_Timeout, alarm_callback, NULL, false);
+}
+
+void wakeup_Screen(){
   // Create a new display buffer
-  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  Paint_NewImage(wakeup, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
   // Paint the whole frame white
   Paint_Clear(WHITE);
 
   // Draw message selection screen
-  Paint_DrawString_EN(0, 10, "Select a message:", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 34, "1. Hello", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 58, "2. World", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 82, "3. Pico!", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(50, 50, "VoidLink", &Font24, BLACK, WHITE);
+  EPD_2in13_V4_Init_Fast();
+  EPD_2in13_V4_Display_Fast(wakeup);
+  sleep_ms(200);
 
-  // Display cursor
-  Paint_DrawString_EN(0, 34, ">", &Font16, BLACK, WHITE);
+}
 
+void core1_entry() {
+  wakeup_Screen();
+  home_Screen();
   screen = SCREEN_DRAW_READY;
 
   while (true) {
     uint32_t flag = multicore_fifo_pop_blocking();
 
     if (flag == 0) {
-      EPD_2in13_V4_Init();
-      EPD_2in13_V4_Display_Base(image);
-      EPD_2in13_V4_Sleep();
+      //Fast refresh on display wakup
+      if (five_Seconds){
+        EPD_2in13_V4_Init_Fast();
+        printf("Waking display.\n");
+        EPD_2in13_V4_Display_Fast(image);
+      }
+      if (refresh_Counter == 15) {
+        EPD_2in13_V4_Display_Base(image);
+        refresh_Counter = 0;
+      }
+      else {
+        EPD_2in13_V4_Display_Partial(image);
+        refresh_Counter++;
+      }
+      //printf("Updating Image\n");
       sleep_ms(100);
+      //Set alarm to sleep display after 7 seconds of inactivity
+      set_flag_and_reset_alarm();
       multicore_fifo_push_blocking_inline(0);
     }
+    
   }
 }
 
