@@ -1,8 +1,8 @@
+#include <pico/time.h>
 #include <stdio.h>
 
-#include "hardware/uart.h"
+#include "class/cdc/cdc_device.h"
 #include "pico/multicore.h"
-#include "pico/stdlib.h"
 #include "pico/unique_id.h"
 #include "tusb.h"
 

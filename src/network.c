@@ -4,8 +4,8 @@
  * This protocol uses big-endian encoding for multi-byte fields.
  */
 
+#include <pico/time.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "hardware/timer.h"
@@ -49,6 +49,7 @@ message_t new_ack_message(uid_t dst, mid_t mid) {
       .flags = {.ack_req = false, .hop_limit = false},
       .data = {mid.mid, 0x00, 0x00},
   };
+  return msg;
 }
 
 // Form a new hello message.

@@ -1,6 +1,10 @@
 #ifndef VOIDLINK_H
 #define VOIDLINK_H
 
+#include <stdint.h>
+
+#include "network.h"
+
 void handle_message(message_t *incoming);
 
 void handle_tx_callback();

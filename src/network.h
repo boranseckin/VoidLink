@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <hardware/timer.h>
+
 // Bump these versions according to the changes made.
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 1

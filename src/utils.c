@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "sx126x.h"
 
 #include "utils.h"
