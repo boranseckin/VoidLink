@@ -1,9 +1,8 @@
-#include <pico/time.h>
 #include <stdio.h>
 
 #include "class/cdc/cdc_device.h"
 #include "pico/multicore.h"
-#include "pico/unique_id.h"
+#include "pico/time.h"
 #include "pico/util/queue.h"
 #include "tusb.h"
 
@@ -19,10 +18,6 @@
 #include "voidlink.h"
 
 static bool STOP = false;
-
-#define MESSAGE_QUEUE_SIZE 8
-static queue_t tx_queue;
-static queue_t rx_queue;
 
 // ((EPD_2in13_V4_WIDTH % 8 == 0) ? (EPD_2in13_V4_WIDTH / 8) : (EPD_2in13_V4_WIDTH / 8 + 1)) *
 // EPD_2in13_V4_HEIGHT = 4080
@@ -50,48 +45,6 @@ typedef enum {
 static screen_t screen = SCREEN_IDLE;
 
 static sx126x_hal_context_t context;
-
-void try_transmit(message_t message) {
-  if (queue_try_add(&tx_queue, &message)) {
-    debug("tx enqueue %d\n", message.id.mid);
-  } else {
-    error("tx queue is full\n");
-  }
-}
-
-// Handle a received message.
-void handle_message(message_t *incoming) {
-  printf("message received from %s", uid_to_string(incoming->src));
-  printf(" to %s\n", uid_to_string(incoming->dst));
-
-  if (incoming->mtype == MTYPE_ACK) {
-    printf("rx: ack: %d\n", incoming->data[0]);
-  } else if (incoming->mtype == MTYPE_HELLO) {
-    printf("rx: hello\n");
-    if (incoming->flags.ack_req) {
-      try_transmit(new_ack_message(incoming->src, incoming->id));
-    }
-  } else if (incoming->mtype == MTYPE_PING) {
-    printf("rx: ping\n");
-    try_transmit(new_pong_message(incoming->src));
-  } else if (incoming->mtype == MTYPE_PONG) {
-    printf("rx: pong\n");
-  } else if (incoming->mtype == MTYPE_TEXT) {
-    printf("rx: text: %s\n", text[incoming->data[0]]);
-  } else if (incoming->mtype == MTYPE_REQ) {
-    printf("rx: request: %d\n", incoming->data[0]);
-    if (incoming->data[0] == INFO_VERSION) {
-      try_transmit(
-          new_response_message(incoming->src, INFO_VERSION, VERSION_MAJOR << 8 | VERSION_MINOR));
-    } else {
-      try_transmit(new_response_message(incoming->src, incoming->data[0], 0));
-    }
-  } else if (incoming->mtype == MTYPE_RES) {
-    printf("rx: response: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
-  } else if (incoming->mtype == MTYPE_RAW) {
-    printf("rx: raw: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
-  }
-}
 
 void handle_tx_callback() {
   sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
@@ -168,14 +121,6 @@ void handle_rx_callback() {
     // TODO: maybe drop the oldest message instead
     error("rx queue is full, dropping message\n");
   }
-
-  // // Update the message history with the received message.
-  // if (check_message_history(rx_payload_buf)) {
-  //   return;
-  // }
-  //
-  // // Handle the received message.
-  // handle_message(&rx_payload_buf);
 }
 
 // Callback function for everytime an interrupt is detected on DIO1.
@@ -395,22 +340,6 @@ void setup_sx126x() {
   sx126x_set_dio_irq_params(&context, 0xFFFF, 0xFFFF, 0x0000, 0x0000);
 
   debug("sx126x setup done\n");
-}
-
-void setup_network() {
-  // it seems trying to read the unique id too early causes a crash
-  sleep_ms(100);
-
-  pico_unique_board_id_t board_id;
-  pico_get_unique_board_id(&board_id);
-  MY_UID.bytes[0] = board_id.id[5];
-  MY_UID.bytes[1] = board_id.id[6];
-  MY_UID.bytes[2] = board_id.id[7];
-
-  queue_init(&tx_queue, sizeof(message_t), MESSAGE_QUEUE_SIZE);
-  queue_init(&rx_queue, sizeof(message_t), MESSAGE_QUEUE_SIZE);
-
-  debug("network setup done\n");
 }
 
 void print_hello() {

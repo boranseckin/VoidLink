@@ -4,15 +4,18 @@
  * This protocol uses big-endian encoding for multi-byte fields.
  */
 
-#include <pico/time.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "hardware/timer.h"
-#include "pico/stdlib.h"
+#include "pico/time.h"
+#include "pico/unique_id.h"
+#include "pico/util/queue.h"
 
 #include "network.h"
 #include "utils.h"
+
+queue_t tx_queue;
+queue_t rx_queue;
 
 uid_t MY_UID = {.bytes = {0x00, 0x00, 0x00}};
 uid_t BROADCAST_UID = {.bytes = {0xFF, 0xFF, 0xFF}};
@@ -37,6 +40,24 @@ mid_t get_mid() {
   mid_t ret = mid;
   mid.mid = (mid.mid + 1) % 255;
   return ret;
+}
+
+void setup_network() {
+  // It seems trying to read the unique id too early causes a crash.
+  sleep_ms(100);
+
+  // Use last 3 bytes of the unique id as the device id.
+  pico_unique_board_id_t board_id;
+  pico_get_unique_board_id(&board_id);
+  MY_UID.bytes[0] = board_id.id[5];
+  MY_UID.bytes[1] = board_id.id[6];
+  MY_UID.bytes[2] = board_id.id[7];
+
+  // Setup the queues.
+  queue_init(&tx_queue, sizeof(message_t), MESSAGE_QUEUE_SIZE);
+  queue_init(&rx_queue, sizeof(message_t), MESSAGE_QUEUE_SIZE);
+
+  debug("network setup done\n");
 }
 
 // Form a new ack message.
@@ -143,6 +164,22 @@ message_t new_raw_message(uid_t dst, uint8_t *data[3]) {
   return msg;
 }
 
+// Neighbour table
+#define MAX_NEIGHBOURS 16
+
+typedef struct {
+  uid_t uid;
+  int8_t rssi;
+  absolute_time_t last_seen;
+} neighbour_t;
+
+typedef struct {
+  neighbour_t neighbours[MAX_NEIGHBOURS];
+  uint8_t count;
+} neighbour_table_t;
+
+static neighbour_table_t neighbour_table = {.neighbours = {0}, .count = 0};
+
 // Update (or add) a neighbour to the table.
 void update_neighbour(uid_t uid, int8_t rssi) {
   for (int i = 0; i < neighbour_table.count; i++) {
@@ -168,6 +205,8 @@ void update_neighbour(uid_t uid, int8_t rssi) {
         to_ms_since_boot(neighbour_table.neighbours[neighbour_table.count - 1].last_seen));
 }
 
+// TODO: periodic cleanup of the neighbour table
+
 void get_neighbours(char *buffer) {
   for (int i = 0; i < neighbour_table.count; i++) {
     neighbour_t *neighbour = &neighbour_table.neighbours[i];
@@ -178,7 +217,10 @@ void get_neighbours(char *buffer) {
   }
 }
 
-// TODO: periodic cleanup of the neighbour table
+// cyclic buffer of received messages
+#define MAX_MESSAGE_HISTORY 16
+static message_t message_history[MAX_MESSAGE_HISTORY] = {0};
+static uint8_t message_history_head = 0;
 
 // Check if a message is already received.
 bool check_message_history(message_t msg) {
@@ -207,5 +249,48 @@ void get_message_history(char *buffer) {
     char *src = uid_to_string(msg->src);
     sprintf(buffer, "%d: [%s] %d\r\n", i, src, msg->mtype);
     buffer += strlen(buffer);
+  }
+}
+
+// Try to add a message to the transit queue to be sent.
+void try_transmit(message_t message) {
+  if (queue_try_add(&tx_queue, &message)) {
+    debug("tx enqueue %d\n", message.id.mid);
+  } else {
+    error("tx queue is full\n");
+  }
+}
+
+// Process a received message
+void handle_message(message_t *incoming) {
+  printf("message received from %s", uid_to_string(incoming->src));
+  printf(" to %s\n", uid_to_string(incoming->dst));
+
+  if (incoming->mtype == MTYPE_ACK) {
+    printf("rx: ack: %d\n", incoming->data[0]);
+  } else if (incoming->mtype == MTYPE_HELLO) {
+    printf("rx: hello\n");
+    if (incoming->flags.ack_req) {
+      try_transmit(new_ack_message(incoming->src, incoming->id));
+    }
+  } else if (incoming->mtype == MTYPE_PING) {
+    printf("rx: ping\n");
+    try_transmit(new_pong_message(incoming->src));
+  } else if (incoming->mtype == MTYPE_PONG) {
+    printf("rx: pong\n");
+  } else if (incoming->mtype == MTYPE_TEXT) {
+    printf("rx: text: %s\n", text[incoming->data[0]]);
+  } else if (incoming->mtype == MTYPE_REQ) {
+    printf("rx: request: %d\n", incoming->data[0]);
+    if (incoming->data[0] == INFO_VERSION) {
+      try_transmit(
+          new_response_message(incoming->src, INFO_VERSION, VERSION_MAJOR << 8 | VERSION_MINOR));
+    } else {
+      try_transmit(new_response_message(incoming->src, incoming->data[0], 0));
+    }
+  } else if (incoming->mtype == MTYPE_RES) {
+    printf("rx: response: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
+  } else if (incoming->mtype == MTYPE_RAW) {
+    printf("rx: raw: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
   }
 }

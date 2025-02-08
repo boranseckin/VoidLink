@@ -4,11 +4,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <hardware/timer.h>
+#include "pico/util/queue.h"
 
 // Bump these versions according to the changes made.
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 1
+
+#define MESSAGE_QUEUE_SIZE 8
+extern queue_t tx_queue;
+extern queue_t rx_queue;
 
 // 16 predefined text messages
 static const char *text[] = {
@@ -103,6 +107,8 @@ typedef struct {
   uint8_t data[3];
 } message_t;
 
+void setup_network();
+
 message_t new_ack_message(uid_t dst, mid_t mid);
 message_t new_hello_message();
 message_t new_ping_message(uid_t dst);
@@ -112,37 +118,13 @@ message_t new_request_message(uid_t dst, info_key_t key);
 message_t new_response_message(uid_t dst, info_key_t key, uint16_t value);
 message_t new_raw_message(uid_t dst, uint8_t *data[3]);
 
-// Neighbour table
-#define MAX_NEIGHBOURS 16
-
-typedef struct {
-  uid_t uid;
-  int8_t rssi;
-  absolute_time_t last_seen;
-} neighbour_t;
-
-typedef struct {
-  neighbour_t neighbours[MAX_NEIGHBOURS];
-  uint8_t count;
-} neighbour_table_t;
-
-static neighbour_table_t neighbour_table = {.neighbours = {0}, .count = 0};
-
-// Update (or add) a neighbour to the table.
 void update_neighbour(uid_t uid, int8_t rssi);
 void get_neighbours(char *buffer);
 
-// Keep track of received message ids and src.
-#define MAX_MESSAGE_HISTORY 16
-
-// TODO: handle reboot and mid resets, maybe add salt to message
-
-// cyclic buffer of received messages
-static message_t message_history[MAX_MESSAGE_HISTORY] = {0};
-static uint8_t message_history_head = 0;
-
-// Check if a message is already received.
 bool check_message_history(message_t msg);
 void get_message_history(char *buffer);
+
+void try_transmit(message_t message);
+void handle_message(message_t *incoming);
 
 #endif // NETWORK_H
