@@ -147,14 +147,14 @@ void handle_rx_callback() {
   // Update the neighbour table with the information from received message.
   update_neighbour(rx_payload_buf.src, pkt_status.signal_rssi_pkt_in_dbm);
 
-  // Update the message history with the received message.
-  if (check_message_history(rx_payload_buf)) {
-    return;
-  }
-
   // Check if the received message is for us.
   if (!is_broadcast(rx_payload_buf.dst) && !is_my_uid(rx_payload_buf.dst)) {
     debug("message not for me\n");
+    return;
+  }
+
+  // Update the message history with the received message.
+  if (check_message_history(rx_payload_buf)) {
     return;
   }
 
