@@ -4,6 +4,7 @@
 #include "class/cdc/cdc_device.h"
 #include "pico/multicore.h"
 #include "pico/unique_id.h"
+#include "pico/util/queue.h"
 #include "tusb.h"
 
 #include "pico_config.h"
@@ -17,8 +18,11 @@
 #include "utils.h"
 #include "voidlink.h"
 
-static message_t rx_payload_buf;
-static message_t tx_payload_buf;
+static bool STOP = false;
+
+#define MESSAGE_QUEUE_SIZE 8
+static queue_t tx_queue;
+static queue_t rx_queue;
 
 // ((EPD_2in13_V4_WIDTH % 8 == 0) ? (EPD_2in13_V4_WIDTH / 8) : (EPD_2in13_V4_WIDTH / 8 + 1)) *
 // EPD_2in13_V4_HEIGHT = 4080
@@ -29,7 +33,6 @@ static uint8_t cursor = 0;
 // Main state machine
 typedef enum {
   STATE_IDLE,
-  STATE_TX_READY,
   STATE_TX,
   STATE_TX_DONE,
   STATE_RX,
@@ -48,6 +51,14 @@ static screen_t screen = SCREEN_IDLE;
 
 static sx126x_hal_context_t context;
 
+void try_transmit(message_t message) {
+  if (queue_try_add(&tx_queue, &message)) {
+    debug("tx enqueue %d\n", message.id.mid);
+  } else {
+    error("tx queue is full\n");
+  }
+}
+
 // Handle a received message.
 void handle_message(message_t *incoming) {
   printf("message received from %s", uid_to_string(incoming->src));
@@ -57,14 +68,12 @@ void handle_message(message_t *incoming) {
     printf("rx: ack: %d\n", incoming->data[0]);
   } else if (incoming->mtype == MTYPE_HELLO) {
     printf("rx: hello\n");
-    tx_payload_buf = new_ack_message(incoming->src, incoming->id);
-    state = STATE_TX_READY;
-    return;
+    if (incoming->flags.ack_req) {
+      try_transmit(new_ack_message(incoming->src, incoming->id));
+    }
   } else if (incoming->mtype == MTYPE_PING) {
     printf("rx: ping\n");
-    tx_payload_buf = new_pong_message(incoming->src);
-    state = STATE_TX_READY;
-    return;
+    try_transmit(new_pong_message(incoming->src));
   } else if (incoming->mtype == MTYPE_PONG) {
     printf("rx: pong\n");
   } else if (incoming->mtype == MTYPE_TEXT) {
@@ -72,20 +81,16 @@ void handle_message(message_t *incoming) {
   } else if (incoming->mtype == MTYPE_REQ) {
     printf("rx: request: %d\n", incoming->data[0]);
     if (incoming->data[0] == INFO_VERSION) {
-      tx_payload_buf =
-          new_response_message(incoming->src, INFO_VERSION, VERSION_MAJOR << 8 | VERSION_MINOR);
+      try_transmit(
+          new_response_message(incoming->src, INFO_VERSION, VERSION_MAJOR << 8 | VERSION_MINOR));
     } else {
-      tx_payload_buf = new_response_message(incoming->src, incoming->data[0], 0);
+      try_transmit(new_response_message(incoming->src, incoming->data[0], 0));
     }
-    state = STATE_TX_READY;
-    return;
   } else if (incoming->mtype == MTYPE_RES) {
     printf("rx: response: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
   } else if (incoming->mtype == MTYPE_RAW) {
     printf("rx: raw: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
   }
-
-  state = STATE_RX;
 }
 
 void handle_tx_callback() {
@@ -96,9 +101,11 @@ void handle_tx_callback() {
     return;
   }
 
-  debug("tx done\n");
-
+  if (state != STATE_TX) {
+    error("TX IRQ triggered while not in TX state\n");
+  }
   state = STATE_TX_DONE;
+  debug("STATE = TX_DONE\n");
 }
 
 void handle_rx_callback() {
@@ -123,6 +130,7 @@ void handle_rx_callback() {
   }
 
   // Read and print the buffer.
+  message_t rx_payload_buf;
   sx126x_read_buffer(&context, buffer_status.buffer_start_pointer, (uint8_t *)&rx_payload_buf,
                      buffer_status.pld_len_in_bytes);
 
@@ -153,13 +161,21 @@ void handle_rx_callback() {
     return;
   }
 
-  // Update the message history with the received message.
-  if (check_message_history(rx_payload_buf)) {
-    return;
+  // Add message to the receive queue.
+  if (queue_try_add(&rx_queue, &rx_payload_buf)) {
+    debug("rx enqueue %d\n", rx_payload_buf.id.mid);
+  } else {
+    // TODO: maybe drop the oldest message instead
+    error("rx queue is full, dropping message\n");
   }
 
-  // Handle the received message.
-  handle_message(&rx_payload_buf);
+  // // Update the message history with the received message.
+  // if (check_message_history(rx_payload_buf)) {
+  //   return;
+  // }
+  //
+  // // Handle the received message.
+  // handle_message(&rx_payload_buf);
 }
 
 // Callback function for everytime an interrupt is detected on DIO1.
@@ -192,13 +208,12 @@ void handle_button_callback(uint gpio, uint32_t events) {
     screen = SCREEN_DRAW_READY;
   } else if (gpio == PIN_BUTTON_OK) {
     if (cursor == 0) {
-      tx_payload_buf = new_ping_message(get_broadcast_uid());
+      try_transmit(new_ping_message(get_broadcast_uid()));
     } else if (cursor == 1) {
-      tx_payload_buf = new_text_message(get_broadcast_uid(), TEXT_COPY);
+      try_transmit((new_text_message(get_broadcast_uid(), TEXT_COPY)));
     } else if (cursor == 2) {
-      tx_payload_buf = new_request_message(get_broadcast_uid(), INFO_VERSION);
+      try_transmit(new_request_message(get_broadcast_uid(), INFO_VERSION));
     }
-    state = STATE_TX_READY;
   } else if (gpio == PIN_BUTTON_BACK) {
   }
 }
@@ -228,20 +243,14 @@ void tud_cdc_rx_cb(uint8_t itf) {
 
       if (strncmp(buf, "ping", 4) == 0) {
         if (strlen(buf) == 4) {
-          tx_payload_buf = new_ping_message(get_broadcast_uid());
+          try_transmit(new_ping_message(get_broadcast_uid()));
         } else {
           uid_t dst = {.bytes = {0x00, 0x00, 0x00}};
           sscanf(buf + 5, "%02hhx:%02hhx:%02hhx", &dst.bytes[0], &dst.bytes[1], &dst.bytes[2]);
-          tx_payload_buf = new_ping_message(dst);
+          try_transmit(new_ping_message(dst));
         }
-        state = STATE_TX_READY;
       } else if (strncmp(buf, "hello", 7) == 0) {
-        tx_payload_buf = new_hello_message();
-        state = STATE_TX_READY;
-      } else if (strncmp(buf, "helloa", 7) == 0) {
-        tx_payload_buf = new_hello_message();
-        tx_payload_buf.flags.ack_req = true;
-        state = STATE_TX_READY;
+        try_transmit(new_hello_message());
       } else if (strncmp(buf, "history", 7) == 0) {
         char buffer[1024];
         get_message_history(buffer);
@@ -250,6 +259,10 @@ void tud_cdc_rx_cb(uint8_t itf) {
         char buffer[1024];
         get_neighbours(buffer);
         tud_cdc_write_str(buffer);
+      } else if (strncmp(buf, "stop", 4) == 0) {
+        STOP = true;
+      } else if (strncmp(buf, "start", 5) == 0) {
+        STOP = false;
       }
 
       tud_cdc_write_flush();
@@ -394,6 +407,9 @@ void setup_network() {
   MY_UID.bytes[1] = board_id.id[6];
   MY_UID.bytes[2] = board_id.id[7];
 
+  queue_init(&tx_queue, sizeof(message_t), MESSAGE_QUEUE_SIZE);
+  queue_init(&rx_queue, sizeof(message_t), MESSAGE_QUEUE_SIZE);
+
   debug("network setup done\n");
 }
 
@@ -436,7 +452,6 @@ void transmit_bytes(uint8_t *bytes, uint8_t length) {
   // Start the transmission.
   sx126x_set_tx(&context, 0x0);
   sx126x_check(&context);
-  state = STATE_TX;
 }
 
 // Transmit a string over the radio. Must be null terminated.
@@ -514,6 +529,7 @@ void core1_entry() {
 int main() {
   sx126x_errors_mask_t errors = 0;
   sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
+  message_t message;
 
   setup_io();
   setup_display();
@@ -525,13 +541,32 @@ int main() {
   print_hello();
 
   while (true) {
-    if (state == STATE_TX_READY) {
-      transmit_packet(&tx_payload_buf);
-    } else if (state == STATE_TX_DONE) {
-      state = STATE_IDLE;
-    } else if (state == STATE_IDLE) {
-      receive_cont();
+    // Process one previously received message.
+    if (!STOP && queue_try_remove(&rx_queue, &message)) {
+      debug("rx dequeue %d\n", message.id.mid);
+      // Update the message history with the received message.
+      // If the message is already received, ignore it.
+      if (!check_message_history(message)) {
+        handle_message(&message);
+      }
+    }
+
+    // Transmit one message if we are not already transmitting.
+    if (state != STATE_TX && queue_try_remove(&tx_queue, &message)) {
+      debug("tx dequeue %d\n", message.id.mid);
+      // Set TX state before calling transmit in case IRQ triggers before we finish.
+      // Otherwise, IRQ can overtake the control flow and set the state to TX_DONE,
+      // which we would overwrite back to TX.
+      state = STATE_TX;
+      debug("STATE = TX\n");
+      transmit_packet(&message);
+    }
+
+    // If we are not actively transmitting, receive instead.
+    if (state == STATE_IDLE || state == STATE_TX_DONE) {
       state = STATE_RX;
+      debug("STATE = RX\n");
+      receive_cont();
     }
 
     if (screen == SCREEN_DRAW_READY) {
