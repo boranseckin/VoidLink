@@ -130,6 +130,7 @@ static neighbour_table_t neighbour_table = {.neighbours = {0}, .count = 0};
 
 // Update (or add) a neighbour to the table.
 void update_neighbour(uid_t uid, int8_t rssi);
+void get_neighbours(char *buffer);
 
 // Keep track of received message ids and src.
 #define MAX_MESSAGE_HISTORY 16
@@ -142,5 +143,6 @@ static uint8_t message_history_head = 0;
 
 // Check if a message is already received.
 bool check_message_history(message_t msg);
+void get_message_history(char *buffer);
 
 #endif // NETWORK_H

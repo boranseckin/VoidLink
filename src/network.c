@@ -168,6 +168,16 @@ void update_neighbour(uid_t uid, int8_t rssi) {
         to_ms_since_boot(neighbour_table.neighbours[neighbour_table.count - 1].last_seen));
 }
 
+void get_neighbours(char *buffer) {
+  for (int i = 0; i < neighbour_table.count; i++) {
+    neighbour_t *neighbour = &neighbour_table.neighbours[i];
+    char *uid = uid_to_string(neighbour->uid);
+    sprintf(buffer, "%s: %d dBm, %d ms\r\n", uid, neighbour->rssi,
+            to_ms_since_boot(neighbour->last_seen));
+    buffer += strlen(buffer);
+  }
+}
+
 // TODO: periodic cleanup of the neighbour table
 
 // Check if a message is already received.
@@ -186,4 +196,16 @@ bool check_message_history(message_t msg) {
   debug("message %d from %s added to history\n", msg.id.mid, uid_to_string(msg.src));
 
   return false;
+}
+
+void get_message_history(char *buffer) {
+  for (int i = 0; i < MAX_MESSAGE_HISTORY; i++) {
+    if (message_history[i].src.bytes[0] == 0) {
+      continue;
+    }
+    message_t *msg = &message_history[i];
+    char *src = uid_to_string(msg->src);
+    sprintf(buffer, "%d: [%s] %d\r\n", i, src, msg->mtype);
+    buffer += strlen(buffer);
+  }
 }

@@ -223,6 +223,9 @@ void tud_cdc_rx_cb(uint8_t itf) {
       buf[len] = 0;
       len = 0;
 
+      tud_cdc_write_char('\r');
+      tud_cdc_write_char('\n');
+
       if (strncmp(buf, "ping", 4) == 0) {
         if (strlen(buf) == 4) {
           tx_payload_buf = new_ping_message(get_broadcast_uid());
@@ -232,9 +235,23 @@ void tud_cdc_rx_cb(uint8_t itf) {
           tx_payload_buf = new_ping_message(dst);
         }
         state = STATE_TX_READY;
+      } else if (strncmp(buf, "hello", 7) == 0) {
+        tx_payload_buf = new_hello_message();
+        state = STATE_TX_READY;
+      } else if (strncmp(buf, "helloa", 7) == 0) {
+        tx_payload_buf = new_hello_message();
+        tx_payload_buf.flags.ack_req = true;
+        state = STATE_TX_READY;
+      } else if (strncmp(buf, "history", 7) == 0) {
+        char buffer[1024];
+        get_message_history(buffer);
+        tud_cdc_write_str(buffer);
+      } else if (strncmp(buf, "neighbour", 7) == 0) {
+        char buffer[1024];
+        get_neighbours(buffer);
+        tud_cdc_write_str(buffer);
       }
 
-      tud_cdc_write_char('\n');
       tud_cdc_write_flush();
     } else {
       buf[len++] = c;
