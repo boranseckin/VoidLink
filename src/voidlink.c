@@ -50,7 +50,7 @@ void handle_tx_callback() {
   sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
   sx126x_get_status(&context, &status);
   if (status.cmd_status != SX126X_CMD_STATUS_CMD_TX_DONE) {
-    error("tx status error (mode: %d | cmd: %d)\n", status.chip_mode, status.cmd_status);
+    error("tx callback status error (mode: %d | cmd: %d)\n", status.chip_mode, status.cmd_status);
     return;
   }
 
@@ -380,7 +380,12 @@ void transmit_bytes(uint8_t *bytes, uint8_t length) {
 
   // Start the transmission.
   sx126x_set_tx(&context, 0x0);
-  sx126x_check(&context);
+
+  sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
+  sx126x_get_status(&context, &status);
+  if (status.chip_mode != SX126X_CHIP_MODE_TX && status.cmd_status != SX126X_CMD_STATUS_RFU) {
+    error("tx status error (mode: %d | cmd: %d)\n", status.chip_mode, status.cmd_status);
+  }
 }
 
 // Transmit a string over the radio. Must be null terminated.
