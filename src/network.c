@@ -17,7 +17,8 @@
 
 queue_t tx_queue;
 queue_t rx_queue;
-ack_t *ack_queue;
+
+ack_t ack_list[MAX_MID] = {0};
 
 uid_t MY_UID = {.bytes = {0x00, 0x00, 0x00}};
 uid_t BROADCAST_UID = {.bytes = {0xFF, 0xFF, 0xFF}};
@@ -58,7 +59,7 @@ bool is_broadcast(uid_t uid) { return memcmp(&uid, &BROADCAST_UID, sizeof(uid_t)
 // Returns the next message id.
 mid_t get_mid() {
   mid_t ret = mid;
-  mid.mid = (mid.mid + 1) % 255;
+  mid.mid = (mid.mid + 1) % MAX_MID;
   return ret;
 }
 
@@ -263,20 +264,46 @@ void try_transmit(message_t message) {
   }
 }
 
-void check_ack_queue() {
-  ack_t *current = ack_queue;
-  while (current != NULL) {
-    if (current->timeout < get_absolute_time()) {
-      debug("ack timeout %d\n", current->message.id.mid);
+void add_ack(message_t *message) {
+  ack_t *ack = &ack_list[message->id.mid];
+  ack->message = *message;
+  ack->timeout = make_timeout_time_ms(ACK_TIMEOUT);
+  debug("ack added %d:%d\n", message->id.mid, ack_list[message->id.mid].message.id.mid);
+}
 
-      // Add the message back to the transmit queue
-      if (queue_try_add(&tx_queue, &current->message)) {
-        debug("tx enqueue (from ack timeout) %d\n", current->message.id.mid);
-        current->timeout = make_timeout_time_ms(ACK_TIMEOUT);
-      } else {
-        error("tx queue is full (from ack timeout)\n");
-      }
+void remove_ack(mid_t mid) {
+  ack_list[mid.mid].timeout = 0;
+  debug("ack removed %d\n", mid.mid);
+}
+
+void check_ack_list() {
+  for (int i = 0; i < MAX_MID; i++) {
+    ack_t *ack = &ack_list[i];
+    if (ack->timeout == 0 || ack->timeout > get_absolute_time()) {
+      continue;
     }
+
+    // Add the message back to the transmit queue
+    debug("ack timeout %d\n", ack->message.id.mid);
+    if (queue_try_add(&tx_queue, &ack->message)) {
+      debug("tx enqueue (from ack timeout) %d\n", ack->message.id.mid);
+      ack->timeout = make_timeout_time_ms(ACK_TIMEOUT);
+    } else {
+      error("tx queue is full (from ack timeout)\n");
+    }
+  }
+}
+
+void get_acks(char *buffer) {
+  for (int i = 0; i < MAX_MID; i++) {
+    ack_t *ack = &ack_list[i];
+    if (ack->timeout == 0) {
+      continue;
+    }
+    char *dst = uid_to_string(ack->message.dst);
+    sprintf(buffer, "%d: [%s] %d (%llu sec)\r\n", i, dst, ack->message.mtype,
+            absolute_time_diff_us(get_absolute_time(), ack->timeout) / 1000 / 1000);
+    buffer += strlen(buffer);
   }
 }
 
@@ -298,23 +325,8 @@ void handle_message(message_t *incoming) {
 
   if (incoming->mtype == MTYPE_ACK) {
     printf("rx: ack: %d\n", incoming->data[0]);
-
-    ack_t *current = ack_queue;
-    ack_t *prev = NULL;
-    while (current != NULL) {
-      if (current->message.id.mid == incoming->data[0]) {
-        if (prev == NULL) {
-          ack_queue = current->next;
-        } else {
-          prev->next = current->next;
-        }
-        free(current);
-        debug("ack removed %d\n", incoming->data[0]);
-        break;
-      }
-      prev = current;
-      current = current->next;
-    }
+    mid_t mid = {incoming->data[0]};
+    remove_ack(mid);
   } else if (incoming->mtype == MTYPE_HELLO) {
     printf("rx: hello\n");
     if (incoming->flags.ack_req) {

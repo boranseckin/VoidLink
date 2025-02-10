@@ -63,6 +63,8 @@ typedef struct {
 
 static mid_t mid = {.mid = 0};
 
+#define MAX_MID 8
+
 // Returns the next message id.
 mid_t get_mid();
 
@@ -107,15 +109,13 @@ typedef struct {
   uint8_t data[3];
 } message_t;
 
-// linked list of messages with local timeout for ack
-typedef struct _ack_t {
+// messages with local timeout for ack
+typedef struct {
   message_t message;
-  uint32_t timeout;
-  struct _ack_t *next;
+  absolute_time_t timeout;
 } ack_t;
 
 #define ACK_TIMEOUT 1000 * 60 // 1 minute
-extern ack_t *ack_queue;
 
 void setup_network();
 
@@ -134,8 +134,13 @@ void get_neighbours(char *buffer);
 bool check_message_history(message_t msg);
 void get_message_history(char *buffer);
 
+void add_ack(message_t *message);
+void remove_ack(mid_t mid);
+void check_ack_list();
+void get_acks(char *buffer);
+
 void try_transmit(message_t message);
-void check_ack_queue();
+
 void handle_message(message_t *incoming);
 
 #endif // NETWORK_H

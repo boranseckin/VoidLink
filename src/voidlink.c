@@ -196,6 +196,10 @@ void tud_cdc_rx_cb(uint8_t itf) {
         }
       } else if (strncmp(buf, "hello", 7) == 0) {
         try_transmit(new_hello_message());
+      } else if (strncmp(buf, "helloa", 7) == 0) {
+        message_t hello = new_hello_message();
+        hello.flags.ack_req = true;
+        try_transmit(hello);
       } else if (strncmp(buf, "history", 7) == 0) {
         char buffer[1024];
         get_message_history(buffer);
@@ -203,6 +207,10 @@ void tud_cdc_rx_cb(uint8_t itf) {
       } else if (strncmp(buf, "neighbour", 7) == 0) {
         char buffer[1024];
         get_neighbours(buffer);
+        tud_cdc_write_str(buffer);
+      } else if (strncmp(buf, "acks", 7) == 0) {
+        char buffer[1024];
+        get_acks(buffer);
         tud_cdc_write_str(buffer);
       } else if (strncmp(buf, "stop", 4) == 0) {
         STOP = true;
@@ -490,22 +498,8 @@ int main() {
       debug("tx dequeue %d\n", message.id.mid);
 
       if (message.flags.ack_req) {
-        // Add the message to the ack queue to keep track of it.
-        ack_t *ack = malloc(sizeof(ack_t));
-        memcpy(&ack->message, &message, sizeof(message_t));
-        ack->timeout = make_timeout_time_ms(ACK_TIMEOUT);
-
-        if (ack_queue == NULL) {
-          ack_queue = ack;
-        } else {
-          ack_t *current = ack_queue;
-          while (current->next != NULL) {
-            current = current->next;
-          }
-          current->next = ack;
-        }
-
-        debug("ack added %d\n", message.id.mid);
+        // Add the message to the ack list to keep track of it.
+        add_ack(&message);
       }
 
       // Set TX state before calling transmit in case IRQ triggers before we finish.
@@ -533,8 +527,8 @@ int main() {
       }
     }
 
-    // Check the ack queue for timeouts.
-    check_ack_queue();
+    // Check the ack list for timeouts.
+    check_ack_list();
 
     // USB uart RX callback job
     tud_task();
