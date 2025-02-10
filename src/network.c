@@ -5,6 +5,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "pico/time.h"
@@ -16,9 +17,28 @@
 
 queue_t tx_queue;
 queue_t rx_queue;
+ack_t *ack_queue;
 
 uid_t MY_UID = {.bytes = {0x00, 0x00, 0x00}};
 uid_t BROADCAST_UID = {.bytes = {0xFF, 0xFF, 0xFF}};
+
+void setup_network() {
+  // It seems trying to read the unique id too early causes a crash.
+  sleep_ms(100);
+
+  // Use last 3 bytes of the unique id as the device id.
+  pico_unique_board_id_t board_id;
+  pico_get_unique_board_id(&board_id);
+  MY_UID.bytes[0] = board_id.id[5];
+  MY_UID.bytes[1] = board_id.id[6];
+  MY_UID.bytes[2] = board_id.id[7];
+
+  // Setup the queues.
+  queue_init(&tx_queue, sizeof(message_t), MESSAGE_QUEUE_SIZE);
+  queue_init(&rx_queue, sizeof(message_t), MESSAGE_QUEUE_SIZE);
+
+  debug("network setup done\n");
+}
 
 // Returns the unique id of the device.
 uid_t get_uid() { return MY_UID; }
@@ -40,24 +60,6 @@ mid_t get_mid() {
   mid_t ret = mid;
   mid.mid = (mid.mid + 1) % 255;
   return ret;
-}
-
-void setup_network() {
-  // It seems trying to read the unique id too early causes a crash.
-  sleep_ms(100);
-
-  // Use last 3 bytes of the unique id as the device id.
-  pico_unique_board_id_t board_id;
-  pico_get_unique_board_id(&board_id);
-  MY_UID.bytes[0] = board_id.id[5];
-  MY_UID.bytes[1] = board_id.id[6];
-  MY_UID.bytes[2] = board_id.id[7];
-
-  // Setup the queues.
-  queue_init(&tx_queue, sizeof(message_t), MESSAGE_QUEUE_SIZE);
-  queue_init(&rx_queue, sizeof(message_t), MESSAGE_QUEUE_SIZE);
-
-  debug("network setup done\n");
 }
 
 // Form a new ack message.
@@ -261,13 +263,58 @@ void try_transmit(message_t message) {
   }
 }
 
-// Process a received message
+void check_ack_queue() {
+  ack_t *current = ack_queue;
+  while (current != NULL) {
+    if (current->timeout < get_absolute_time()) {
+      debug("ack timeout %d\n", current->message.id.mid);
+
+      // Add the message back to the transmit queue
+      if (queue_try_add(&tx_queue, &current->message)) {
+        debug("tx enqueue (from ack timeout) %d\n", current->message.id.mid);
+        current->timeout = make_timeout_time_ms(ACK_TIMEOUT);
+      } else {
+        error("tx queue is full (from ack timeout)\n");
+      }
+    }
+  }
+}
+
+/**
+ * Process a received message.
+ *
+ * ACK: remove related message from the ack queue
+ * HELLO: send an ACK if requested
+ * PING: send a PONG
+ * PONG: do nothing
+ * TEXT: print the text
+ * REQ: send a RES
+ * RES: remove related message from the ack queue, update the neighbour table
+ * RAW: do nothing
+ */
 void handle_message(message_t *incoming) {
   printf("message received from %s", uid_to_string(incoming->src));
   printf(" to %s\n", uid_to_string(incoming->dst));
 
   if (incoming->mtype == MTYPE_ACK) {
     printf("rx: ack: %d\n", incoming->data[0]);
+
+    ack_t *current = ack_queue;
+    ack_t *prev = NULL;
+    while (current != NULL) {
+      if (current->message.id.mid == incoming->data[0]) {
+        if (prev == NULL) {
+          ack_queue = current->next;
+        } else {
+          prev->next = current->next;
+        }
+        free(current);
+        debug("ack removed %d\n", incoming->data[0]);
+        break;
+      }
+      prev = current;
+      current = current->next;
+    }
   } else if (incoming->mtype == MTYPE_HELLO) {
     printf("rx: hello\n");
     if (incoming->flags.ack_req) {
@@ -285,6 +332,9 @@ void handle_message(message_t *incoming) {
     if (incoming->data[0] == INFO_VERSION) {
       try_transmit(
           new_response_message(incoming->src, INFO_VERSION, VERSION_MAJOR << 8 | VERSION_MINOR));
+    } else if (incoming->data[0] == INFO_UPTIME) {
+      try_transmit(
+          new_response_message(incoming->src, INFO_UPTIME, to_ms_since_boot(get_absolute_time())));
     } else {
       try_transmit(new_response_message(incoming->src, incoming->data[0], 0));
     }

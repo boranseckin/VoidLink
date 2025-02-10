@@ -488,6 +488,26 @@ int main() {
     // Transmit one message if we are not already transmitting.
     if (state != STATE_TX && queue_try_remove(&tx_queue, &message)) {
       debug("tx dequeue %d\n", message.id.mid);
+
+      if (message.flags.ack_req) {
+        // Add the message to the ack queue to keep track of it.
+        ack_t *ack = malloc(sizeof(ack_t));
+        memcpy(&ack->message, &message, sizeof(message_t));
+        ack->timeout = make_timeout_time_ms(ACK_TIMEOUT);
+
+        if (ack_queue == NULL) {
+          ack_queue = ack;
+        } else {
+          ack_t *current = ack_queue;
+          while (current->next != NULL) {
+            current = current->next;
+          }
+          current->next = ack;
+        }
+
+        debug("ack added %d\n", message.id.mid);
+      }
+
       // Set TX state before calling transmit in case IRQ triggers before we finish.
       // Otherwise, IRQ can overtake the control flow and set the state to TX_DONE,
       // which we would overwrite back to TX.
@@ -512,6 +532,9 @@ int main() {
         screen = SCREEN_IDLE;
       }
     }
+
+    // Check the ack queue for timeouts.
+    check_ack_queue();
 
     // USB uart RX callback job
     tud_task();

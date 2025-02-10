@@ -107,6 +107,16 @@ typedef struct {
   uint8_t data[3];
 } message_t;
 
+// linked list of messages with local timeout for ack
+typedef struct _ack_t {
+  message_t message;
+  uint32_t timeout;
+  struct _ack_t *next;
+} ack_t;
+
+#define ACK_TIMEOUT 1000 * 60 // 1 minute
+extern ack_t *ack_queue;
+
 void setup_network();
 
 message_t new_ack_message(uid_t dst, mid_t mid);
@@ -125,6 +135,7 @@ bool check_message_history(message_t msg);
 void get_message_history(char *buffer);
 
 void try_transmit(message_t message);
+void check_ack_queue();
 void handle_message(message_t *incoming);
 
 #endif // NETWORK_H
