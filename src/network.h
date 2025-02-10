@@ -109,14 +109,6 @@ typedef struct {
   uint8_t data[3];
 } message_t;
 
-// messages with local timeout for ack
-typedef struct {
-  message_t message;
-  absolute_time_t timeout;
-} ack_t;
-
-#define ACK_TIMEOUT 1000 * 60 // 1 minute
-
 void setup_network();
 
 message_t new_ack_message(uid_t dst, mid_t mid);

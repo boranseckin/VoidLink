@@ -5,7 +5,6 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "pico/time.h"
@@ -17,8 +16,6 @@
 
 queue_t tx_queue;
 queue_t rx_queue;
-
-ack_t ack_list[MAX_MID] = {0};
 
 uid_t MY_UID = {.bytes = {0x00, 0x00, 0x00}};
 uid_t BROADCAST_UID = {.bytes = {0xFF, 0xFF, 0xFF}};
@@ -170,6 +167,7 @@ message_t new_raw_message(uid_t dst, uint8_t *data[3]) {
 // Neighbour table
 #define MAX_NEIGHBOURS 16
 
+// TODO: add fields to save information about the neighbour (e.g. version)
 typedef struct {
   uid_t uid;
   int8_t rssi;
@@ -196,6 +194,7 @@ void update_neighbour(uid_t uid, int8_t rssi) {
   }
 
   if (neighbour_table.count >= MAX_NEIGHBOURS) {
+    // TODO: periodic cleanup of the neighbour table
     error("neighbour table full\n");
     return;
   }
@@ -207,8 +206,6 @@ void update_neighbour(uid_t uid, int8_t rssi) {
   debug("neighbour %s added (rssi: %d, ts: %dms)\n", uid_to_string(uid), rssi,
         to_ms_since_boot(neighbour_table.neighbours[neighbour_table.count - 1].last_seen));
 }
-
-// TODO: periodic cleanup of the neighbour table
 
 void get_neighbours(char *buffer) {
   for (int i = 0; i < neighbour_table.count; i++) {
@@ -226,6 +223,7 @@ static message_t message_history[MAX_MESSAGE_HISTORY] = {0};
 static uint8_t message_history_head = 0;
 
 // Check if a message is already received.
+// If not, add it to the history.
 bool check_message_history(message_t msg) {
   for (int i = 0; i < MAX_MESSAGE_HISTORY; i++) {
     // TODO: consider the case where a node reboots and loses the mid counter
@@ -255,27 +253,35 @@ void get_message_history(char *buffer) {
   }
 }
 
-// Try to add a message to the transit queue to be sent.
-void try_transmit(message_t message) {
-  if (queue_try_add(&tx_queue, &message)) {
-    debug("tx enqueue %d\n", message.id.mid);
-  } else {
-    error("tx queue is full\n");
-  }
-}
+// messages with local timeout for ack
+// TODO: max_retries
+typedef struct {
+  message_t message;
+  absolute_time_t timeout;
+} ack_t;
 
+#define ACK_TIMEOUT 1000 * 60 // 1 minute
+
+// Ack list to keep track of messages that need to be acked.
+// Each message is indexed by its mid.
+ack_t ack_list[MAX_MID] = {0};
+
+// Add an ack to the list.
 void add_ack(message_t *message) {
   ack_t *ack = &ack_list[message->id.mid];
   ack->message = *message;
   ack->timeout = make_timeout_time_ms(ACK_TIMEOUT);
-  debug("ack added %d:%d\n", message->id.mid, ack_list[message->id.mid].message.id.mid);
+  debug("ack added %d\n", message->id.mid);
 }
 
+// Remove an ack from the list, marking it as acked.
 void remove_ack(mid_t mid) {
   ack_list[mid.mid].timeout = 0;
   debug("ack removed %d\n", mid.mid);
 }
 
+// Check the ack list for timed out messages.
+// If an ack timed out, retransmit the corresponding message.
 void check_ack_list() {
   for (int i = 0; i < MAX_MID; i++) {
     ack_t *ack = &ack_list[i];
@@ -307,16 +313,25 @@ void get_acks(char *buffer) {
   }
 }
 
+// Try to add a message to the transit queue to be sent.
+void try_transmit(message_t message) {
+  if (queue_try_add(&tx_queue, &message)) {
+    debug("tx enqueue %d\n", message.id.mid);
+  } else {
+    error("tx queue is full\n");
+  }
+}
+
 /**
  * Process a received message.
  *
- * ACK: remove related message from the ack queue
+ * ACK: remove related message from the ack list
  * HELLO: send an ACK if requested
  * PING: send a PONG
  * PONG: do nothing
  * TEXT: print the text
  * REQ: send a RES
- * RES: remove related message from the ack queue, update the neighbour table
+ * RES: update the neighbour table
  * RAW: do nothing
  */
 void handle_message(message_t *incoming) {
