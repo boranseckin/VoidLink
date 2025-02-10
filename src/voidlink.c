@@ -17,6 +17,7 @@
 #include "utils.h"
 #include "voidlink.h"
 
+// Debug flag to stop processing of received messages.
 static bool STOP = false;
 
 // ((EPD_2in13_V4_WIDTH % 8 == 0) ? (EPD_2in13_V4_WIDTH / 8) : (EPD_2in13_V4_WIDTH / 8 + 1)) *
@@ -25,7 +26,7 @@ static bool STOP = false;
 static uint8_t image[IMAGE_SIZE];
 static uint8_t cursor = 0;
 
-// Main state machine
+// Main state machine.
 typedef enum {
   STATE_IDLE,
   STATE_TX,
@@ -33,6 +34,7 @@ typedef enum {
   STATE_RX,
 } state_t;
 
+// Current state of the main state machine.
 static state_t state = STATE_IDLE;
 
 // Screen state machine
@@ -42,6 +44,7 @@ typedef enum {
   SCREEN_DRAW,
 } screen_t;
 
+// Current state of the screen state machine.
 static screen_t screen = SCREEN_IDLE;
 
 static sx126x_hal_context_t context;
@@ -116,7 +119,7 @@ void handle_rx_callback() {
 
   // Add message to the receive queue.
   if (queue_try_add(&rx_queue, &rx_payload_buf)) {
-    debug("rx enqueue %d\n", rx_payload_buf.id.mid);
+    debug("rx enqueue %d\n", rx_payload_buf.id);
   } else {
     // TODO: maybe drop the oldest message instead
     error("rx queue is full, dropping message\n");
@@ -171,7 +174,8 @@ void handle_irq_callback(uint gpio, uint32_t events) {
   }
 }
 
-// USB uart RX callback
+// USB uart RX callback.
+// printf does not work during this callback.
 void tud_cdc_rx_cb(uint8_t itf) {
   // keep reading into a static buffer until carriage return
   static char buf[64];
@@ -196,6 +200,10 @@ void tud_cdc_rx_cb(uint8_t itf) {
         }
       } else if (strncmp(buf, "hello", 7) == 0) {
         try_transmit(new_hello_message());
+      } else if (strncmp(buf, "helloa", 7) == 0) {
+        message_t hello = new_hello_message();
+        hello.flags.ack_req = true;
+        try_transmit(hello);
       } else if (strncmp(buf, "history", 7) == 0) {
         char buffer[1024];
         get_message_history(buffer);
@@ -203,6 +211,10 @@ void tud_cdc_rx_cb(uint8_t itf) {
       } else if (strncmp(buf, "neighbour", 7) == 0) {
         char buffer[1024];
         get_neighbours(buffer);
+        tud_cdc_write_str(buffer);
+      } else if (strncmp(buf, "acks", 7) == 0) {
+        char buffer[1024];
+        get_acks(buffer);
         tud_cdc_write_str(buffer);
       } else if (strncmp(buf, "stop", 4) == 0) {
         STOP = true;
@@ -477,7 +489,7 @@ int main() {
   while (true) {
     // Process one previously received message.
     if (!STOP && queue_try_remove(&rx_queue, &message)) {
-      debug("rx dequeue %d\n", message.id.mid);
+      debug("rx dequeue %d\n", message.id);
       // Update the message history with the received message.
       // If the message is already received, ignore it.
       if (!check_message_history(message)) {
@@ -487,7 +499,13 @@ int main() {
 
     // Transmit one message if we are not already transmitting.
     if (state != STATE_TX && queue_try_remove(&tx_queue, &message)) {
-      debug("tx dequeue %d\n", message.id.mid);
+      debug("tx dequeue %d\n", message.id);
+
+      if (message.flags.ack_req) {
+        // Add the message to the ack list to keep track of it.
+        add_ack(&message);
+      }
+
       // Set TX state before calling transmit in case IRQ triggers before we finish.
       // Otherwise, IRQ can overtake the control flow and set the state to TX_DONE,
       // which we would overwrite back to TX.
@@ -512,6 +530,9 @@ int main() {
         screen = SCREEN_IDLE;
       }
     }
+
+    // Check the ack list for timeouts.
+    check_ack_list();
 
     // USB uart RX callback job
     tud_task();

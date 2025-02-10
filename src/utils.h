@@ -24,6 +24,13 @@ static const char *ERRORS[] = {
     "RC64K_CALIBRATION", "RC13M_CALIBRATION", "PLL_CALIBRATION", "ADC_CALIBRATION",
     "IMG_CALIBRATION",   "XOSC_START",        "PLL_LOCK",        "PA_RAMP"};
 
+// 16 predefined text messages
+static const char *TEXT_MESSAGES[] = {
+    "OK",   "NO",     "Over",         "Out", "Go ahead",       "Stand-by",      "Come in",
+    "Copy", "Repeat", "Break, break", "SOS", "Good reception", "Bad reception", "Stay put",
+    "Move",
+};
+
 void sx126x_check(const void *context);
 void sx126x_print_decoded_irq(sx126x_irq_mask_t mask);
 
