@@ -10,17 +10,14 @@
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 1
 
+// Maximum number of messages that can be buffered in the queue (both rx and tx).
 #define MESSAGE_QUEUE_SIZE 8
+// Outgoing message queue.
 extern queue_t tx_queue;
+// Incoming message queue.
 extern queue_t rx_queue;
 
-// 16 predefined text messages
-static const char *text[] = {
-    "OK",   "NO",     "Over",         "Out", "Go ahead",       "Stand-by",      "Come in",
-    "Copy", "Repeat", "Break, break", "SOS", "Good reception", "Bad reception", "Stay put",
-    "Move",
-};
-
+// 16 predefined text messages.
 typedef enum __attribute__((__packed__)) {
   TEXT_OK = 0,
   TEXT_NO = 1,
@@ -39,14 +36,11 @@ typedef enum __attribute__((__packed__)) {
   TEXT_MOVE = 14,
 } text_id_t;
 
-// uid 24 bit int
+// Unique identifier for a device.
+// Constructed from the last 3 bytes of the unique id of the pico.
 typedef struct {
   uint8_t bytes[3];
 } uid_t;
-
-// must call setup first
-extern uid_t MY_UID;
-extern uid_t BROADCAST_UID;
 
 uid_t get_uid();
 uid_t get_broadcast_uid();
@@ -56,19 +50,12 @@ char *uid_to_string(uid_t uid);
 bool is_my_uid(uid_t uid);
 bool is_broadcast(uid_t uid);
 
-// mid 4 bit int
-typedef struct {
-  uint8_t mid;
-} mid_t;
+// Message ID.
+typedef uint8_t mid_t;
 
-static mid_t mid = {.mid = 0};
-
-#define MAX_MID 8
-
-// Returns the next message id.
 mid_t get_mid();
 
-// message type
+// Message types.
 typedef enum __attribute__((__packed__)) {
   MTYPE_ACK = 0,
   MTYPE_HELLO = 1,
@@ -80,12 +67,15 @@ typedef enum __attribute__((__packed__)) {
   MTYPE_RAW = 7,
 } mtype_t;
 
-// flags
+// Message flags.
 typedef struct {
+  // Indicates if an ACK is requested for this message.
   bool ack_req : 1;
+  // Indicates how many hops this message can travel.
   bool hop_limit : 1;
 } flags_t;
 
+// Information types.
 typedef enum __attribute__((__packed__)) {
   INFO_VERSION = 0,
   INFO_BATTERY = 1,
@@ -93,13 +83,13 @@ typedef enum __attribute__((__packed__)) {
   INFO_CALLSIGN = 3,
 } info_key_t;
 
-// inforamtion
+// Information payload.
 typedef struct {
   info_key_t key;
   uint8_t value;
 } info_t;
 
-// message
+// Message structure.
 typedef struct {
   uid_t dst;
   uid_t src;
