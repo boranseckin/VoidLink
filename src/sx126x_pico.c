@@ -23,7 +23,9 @@ static uint8_t payload_buf[PAYLOAD_BUFFER_SIZE];
 #define IMAGE_SIZE 4080
 static uint8_t image[IMAGE_SIZE];
 static uint8_t wakeup[IMAGE_SIZE];
-static uint8_t cursor = 0;
+static uint8_t message_Cursor = 0;
+static uint8_t home_Cursor = 0;
+static uint8_t received_Cursor = 0;
 alarm_id_t alarm_id;
 int refresh_Counter = 0;
 volatile bool five_Seconds = true;
@@ -31,7 +33,7 @@ static uint32_t display_Timeout = 7000;
 //character array to store received messages
 char saved_Messages[5][PAYLOAD_BUFFER_SIZE + 4];
 //number of messages received
-int msg_Number = 0;
+int32_t msg_Number = 0;
 
 static char *messages[] = {
     "Hello",
@@ -63,6 +65,7 @@ static screen_t screen = SCREEN_IDLE;
 typedef enum {
   DISPLAY_HOME,
   DISPLAY_MSG,
+  DISPLAY_RXMSG,
   DISPLAY_NEIGHBOURS,
   DISPLAY_SETTINGS,
 } display_t;
@@ -162,6 +165,28 @@ void msg_Screen(){
 
   // Display cursor
   Paint_DrawString_EN(0, 34, ">", &Font16, BLACK, WHITE);
+  message_Cursor = 0;
+}
+
+void received_Msgs(){
+  // Create a new display buffer
+  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  // Paint the whole frame white
+  Paint_Clear(WHITE);
+
+  // Draw message selection screen
+  Paint_DrawString_EN(0, 10, "Received Messages:", &Font16, BLACK, WHITE);
+  for (int i = 0; i < 3; i++){
+    if (i < msg_Number) {
+      Paint_DrawString_EN(0, 34 + i * 24, saved_Messages[i], &Font16, BLACK, WHITE);
+    }
+    else {
+      break;
+    }
+  }
+  if (msg_Number == 0){
+    Paint_DrawString_EN(0, 34, "No messages received.", &Font16, BLACK, WHITE);
+  }
 }
 
 void neighbours_Screen(){
@@ -179,18 +204,23 @@ void neighbours_Screen(){
 
 void home_Screen(){
   // Create a new display buffer
-  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE); //Just do for first time setup
+  //Paint_SelectImage(image); //Do this for every other time
   // Paint the whole frame white
-  Paint_Clear(WHITE);
+  Paint_Clear(WHITE); //Just do for first time setup
 
   // Draw message selection screen
-  Paint_DrawString_EN(0, 10, "Home:", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 34, "1. Send Message", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 58, "2. Received Messages", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 82, "3. Settings", &Font16, BLACK, WHITE);
-
-  // Display cursor
-  Paint_DrawString_EN(0, 34, ">", &Font16, BLACK, WHITE);
+  Paint_DrawRectangle(50,50,80,80,BLACK,DOT_PIXEL_2X2,DRAW_FILL_FULL);
+  Paint_DrawString_EN(57, 57, "M", &Font20, WHITE, WHITE);
+  Paint_DrawString_EN(37, 82, "Messages", &Font12, BLACK, WHITE);
+  Paint_DrawRectangle(100,50,130,80,BLACK,DOT_PIXEL_2X2,DRAW_FILL_EMPTY);
+  Paint_DrawString_EN(107, 57, "S", &Font20, BLACK, WHITE);
+  Paint_DrawString_EN(83, 82, "Settings", &Font12, WHITE, WHITE);
+  if (msg_Number > 0){
+  Paint_DrawString_EN(105, 110," new messages", &Font12, BLACK, WHITE);
+  Paint_DrawNum(100, 110, msg_Number, &Font12, WHITE, BLACK);
+  }
+  home_Cursor = 0;
 }
 
 void settings_Screen(){
@@ -218,15 +248,40 @@ void handle_button_callback(uint gpio, uint32_t events) {
       case DISPLAY_HOME:
           printf("On Home Screen.\n"); //For testing purposes
           // Add selection drawings for home screen
+          home_Cursor = (home_Cursor + 1) % 2;
+          if (home_Cursor==1) {
+            //select next screen
+            Paint_SelectImage(image);
+            Paint_Clear(WHITE);
+            Paint_DrawRectangle(50,50,80,80,BLACK,DOT_PIXEL_2X2,DRAW_FILL_EMPTY);
+            Paint_DrawString_EN(57, 57, "M", &Font20, BLACK, WHITE);
+            Paint_DrawString_EN(37, 82, "Messages", &Font12, WHITE, WHITE);
+            Paint_DrawRectangle(100,50,130,80,BLACK,DOT_PIXEL_2X2,DRAW_FILL_FULL);
+            Paint_DrawString_EN(107, 57, "S", &Font20, WHITE, WHITE);
+            Paint_DrawString_EN(86, 82, "Settings", &Font12, BLACK, WHITE);
+            if (msg_Number > 0){ 
+              Paint_DrawString_EN(105, 110," new messages", &Font12, BLACK, WHITE);
+              Paint_DrawNum(100, 110, msg_Number, &Font12, WHITE, BLACK);
+              }
+          }
+          else{
+            home_Screen();
+          }
+          screen = SCREEN_DRAW_READY;
+          break;
+      case DISPLAY_RXMSG:
+          printf("On Received Messages Screen.\n"); //For testing purposes
+          // Add selection drawings for received messages screen
+          //received_Msgs();
           break;
 
       case DISPLAY_MSG:
           printf("On Message Screen.\n"); //For testing purposes
-          cursor = (cursor + 1) % 3;
+          message_Cursor = (message_Cursor + 1) % 3;
           for (int i = 0; i < 3; i++) {
             Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
           }
-          Paint_DrawString_EN(0, 34 + cursor * 24, ">", &Font16, BLACK, WHITE);
+          Paint_DrawString_EN(0, 34 + message_Cursor * 24, ">", &Font16, BLACK, WHITE);
           screen = SCREEN_DRAW_READY;
           break;
 
@@ -245,10 +300,21 @@ void handle_button_callback(uint gpio, uint32_t events) {
       case DISPLAY_HOME:
           //printf("On Home Screen."); //For testing purposes
           // Add selection drawings for home screen
-          display = DISPLAY_MSG;
-          msg_Screen();
-          refresh_Counter = 15;
-          screen = SCREEN_DRAW_READY;
+          if (home_Cursor == 0){ //Go to msg screen
+            display = DISPLAY_RXMSG;
+            received_Msgs();
+            refresh_Counter = 15;
+            screen = SCREEN_DRAW_READY;
+          } 
+          if (home_Cursor == 1){ //Go to settings screen
+            display = DISPLAY_SETTINGS;
+            settings_Screen();
+            refresh_Counter = 15;
+            screen = SCREEN_DRAW_READY;
+          }
+          break;
+      case DISPLAY_RXMSG:
+          // Add selection drawings for received messages screen
           break;
 
       case DISPLAY_MSG:
@@ -272,6 +338,14 @@ void handle_button_callback(uint gpio, uint32_t events) {
           printf("Already at home\n"); //For testing purposes
           // Add selection drawings for home screen
           break;
+      
+      case DISPLAY_RXMSG:
+          // Add selection drawings for received messages screen
+          display = DISPLAY_HOME;
+          home_Screen();
+          refresh_Counter = 15;
+          screen = SCREEN_DRAW_READY;
+          break;
 
       case DISPLAY_MSG:
           //printf("Send Msg."); //For testing purposes
@@ -284,6 +358,10 @@ void handle_button_callback(uint gpio, uint32_t events) {
       case DISPLAY_SETTINGS:
           //printf("On Settings Screen."); //For testing purposes
           // Add selection drawings for settings screen
+          display = DISPLAY_HOME;
+          home_Screen();
+          refresh_Counter = 15;
+          screen = SCREEN_DRAW_READY;
           break;
 
       case DISPLAY_NEIGHBOURS:
@@ -557,7 +635,7 @@ int main() {
 
   while (true) {
     if (state == STATE_TX_READY) {
-      transmit_string(messages[cursor]);
+      transmit_string(messages[message_Cursor]);
     } else if (state == STATE_TX_DONE) {
       state = STATE_IDLE;
     } else if (state == STATE_IDLE) {
