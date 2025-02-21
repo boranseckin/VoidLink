@@ -53,7 +53,8 @@ bool is_broadcast(uid_t uid);
 // Message ID.
 typedef uint8_t mid_t;
 
-mid_t get_mid();
+// Message salt.
+typedef uint8_t salt_t;
 
 // Message types.
 typedef enum __attribute__((__packed__)) {
@@ -94,6 +95,7 @@ typedef struct {
   uid_t dst;
   uid_t src;
   mid_t id;
+  salt_t salt;
   mtype_t mtype;
   flags_t flags;
   uint8_t data[3];

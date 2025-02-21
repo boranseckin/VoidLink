@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "pico/rand.h"
 #include "pico/time.h"
 #include "pico/unique_id.h"
 #include "pico/util/queue.h"
@@ -72,12 +73,16 @@ mid_t get_mid() {
   return mid;
 }
 
+// Return a randomly generated salt.
+salt_t get_salt() { return get_rand_32() & 0xFF; }
+
 // Forms a new ack message.
 message_t new_ack_message(uid_t dst, mid_t mid) {
   message_t msg = {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
+      .salt = get_salt(),
       .mtype = MTYPE_ACK,
       .flags = {.ack_req = false, .hop_limit = false},
       .data = {mid, 0x00, 0x00},
@@ -91,6 +96,7 @@ message_t new_hello_message() {
       .dst = get_broadcast_uid(),
       .src = get_uid(),
       .id = get_mid(),
+      .salt = get_salt(),
       .mtype = MTYPE_HELLO,
       .flags = {.ack_req = false, .hop_limit = false},
       .data = {0x00, 0x00, 0x00},
@@ -104,6 +110,7 @@ message_t new_ping_message(uid_t dst) {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
+      .salt = get_salt(),
       .mtype = MTYPE_PING,
       .flags = {.ack_req = false, .hop_limit = false},
       .data = {0x00, 0x00, 0x00},
@@ -117,6 +124,7 @@ message_t new_pong_message(uid_t dst) {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
+      .salt = get_salt(),
       .mtype = MTYPE_PONG,
       .flags = {.ack_req = false, .hop_limit = false},
       .data = {0x00, 0x00, 0x00},
@@ -130,6 +138,7 @@ message_t new_text_message(uid_t dst, text_id_t id) {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
+      .salt = get_salt(),
       .mtype = MTYPE_TEXT,
       .flags = {.ack_req = false, .hop_limit = false},
       .data = {id, 0x00, 0x00},
@@ -143,6 +152,7 @@ message_t new_request_message(uid_t dst, info_key_t key) {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
+      .salt = get_salt(),
       .mtype = MTYPE_REQ,
       .flags = {.ack_req = false, .hop_limit = false},
       .data = {key, 0x00, 0x00},
@@ -156,6 +166,7 @@ message_t new_response_message(uid_t dst, info_key_t key, uint16_t value) {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
+      .salt = get_salt(),
       .mtype = MTYPE_RES,
       .flags = {.ack_req = false, .hop_limit = false},
       .data = {key, (value >> 8) & 0xFF, (value & 0xFF)},
@@ -169,6 +180,7 @@ message_t new_raw_message(uid_t dst, uint8_t *data[3]) {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
+      .salt = get_salt(),
       .mtype = MTYPE_RAW,
       .flags = {.ack_req = false, .hop_limit = false},
   };
@@ -240,13 +252,13 @@ static message_t message_history[MAX_MESSAGE_HISTORY] = {0};
 // Index of the next message to be added.
 static uint8_t message_history_head = 0;
 
-// Check if a message is already received.
+// Check if a message is already received using src, id and salt.
 // If not, add it to the history.
 bool check_message_history(message_t msg) {
   for (int i = 0; i < MAX_MESSAGE_HISTORY; i++) {
-    // TODO: consider the case where a node reboots and loses the mid counter
     if (memcmp(&message_history[i].src, &msg.src, sizeof(uid_t)) == 0 &&
-        memcmp(&message_history[i].id, &msg.id, sizeof(mid_t)) == 0) {
+        memcmp(&message_history[i].id, &msg.id, sizeof(mid_t)) == 0 &&
+        memcmp(&message_history[i].salt, &msg.salt, sizeof(salt_t)) == 0) {
       debug("message %d from %s already received\n", msg.id, uid_to_string(msg.src));
       return true;
     }
@@ -267,7 +279,7 @@ void get_message_history(char *buffer) {
     }
     message_t *msg = &message_history[i];
     char *src = uid_to_string(msg->src);
-    sprintf(buffer, "%d: [%s] %d\r\n", i, src, msg->mtype);
+    sprintf(buffer, "%d: [%s] %d %d\r\n", i, src, msg->id, msg->salt);
     buffer += strlen(buffer);
   }
 }
