@@ -16,6 +16,9 @@
 
 #define error(...) printf(__VA_ARGS__)
 
+#define _PRINT_DEFINE(x) #x
+#define PRINT_DEFINE(x) _PRINT_DEFINE(x)
+
 static const char *STATUS[] = {
     "RESERVED",         "RFU",        "DATA_AVAILABLE", "CMD_TIMEOUT", "CMD_PROCESS_ERROR",
     "CMD_EXEC_FAILURE", "CMD_TX_DONE"};
