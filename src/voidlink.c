@@ -330,13 +330,7 @@ void setup_sx126x() {
   sx126x_set_tx_params(&context, 0x16, SX126X_RAMP_40_US);
 
   // Setup the modulation parameters for LORA.
-  sx126x_mod_params_lora_t mod_params = {
-      .sf = SX126X_LORA_SF7,
-      .bw = SX126X_LORA_BW_250,
-      .cr = SX126X_LORA_CR_4_5,
-      .ldro = 0,
-  };
-  sx126x_set_lora_mod_params(&context, &mod_params);
+  sx126x_set_lora_mod_params(&context, &MOD_PARAMS_LONGRANGE);
 
   // Setup the packet parameters for LORA.
   sx126x_pkt_params_lora_t packet_params = {

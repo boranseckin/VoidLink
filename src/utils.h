@@ -31,6 +31,28 @@ static const char *TEXT_MESSAGES[] = {
     "Move",
 };
 
+// Predefined modulation parameters
+static const sx126x_mod_params_lora_t MOD_PARAMS_DEFAULT = {
+    .sf = SX126X_LORA_SF10,
+    .bw = SX126X_LORA_BW_250,
+    .cr = SX126X_LORA_CR_4_5,
+    .ldro = 0,
+};
+
+static const sx126x_mod_params_lora_t MOD_PARAMS_FAST = {
+    .sf = SX126X_LORA_SF7,
+    .bw = SX126X_LORA_BW_250,
+    .cr = SX126X_LORA_CR_4_5,
+    .ldro = 0,
+};
+
+static const sx126x_mod_params_lora_t MOD_PARAMS_LONGRANGE = {
+    .sf = SX126X_LORA_SF12,
+    .bw = SX126X_LORA_BW_125,
+    .cr = SX126X_LORA_CR_4_8,
+    .ldro = 1, // low data-rate optimization is recommended for SF12 & 125kHz
+};
+
 void sx126x_check(const void *context);
 void sx126x_print_decoded_irq(sx126x_irq_mask_t mask);
 
