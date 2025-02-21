@@ -335,8 +335,8 @@ void setup_sx126x() {
   // Setup the packet parameters for LORA.
   sx126x_pkt_params_lora_t packet_params = {
       .preamble_len_in_symb = 0x10,
-      .header_type = SX126X_LORA_PKT_EXPLICIT,
-      .pld_len_in_bytes = 0x20,
+      .header_type = SX126X_LORA_PKT_IMPLICIT,
+      .pld_len_in_bytes = sizeof(message_t),
       .crc_is_on = true,
       .invert_iq_is_on = false,
   };
