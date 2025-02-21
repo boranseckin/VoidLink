@@ -5,8 +5,6 @@ cmake_minimum_required(VERSION 3.13)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-# https://github.com/raspberrypi/pico-sdk/issues/1605#issuecomment-1934567059
-set(CMAKE_C_STANDARD_INCLUDE_DIRECTORIES ${PICO_SDK_PATH}/../../toolchain/13_3_Rel1/arm-none-eabi/include)
 
 # Initialise pico_sdk from installed location
 # (note this can come from environment, CMake cache etc)

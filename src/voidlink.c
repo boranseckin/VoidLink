@@ -137,7 +137,7 @@ void handle_dio1_callback(uint gpio, uint32_t events) {
   sx126x_irq_mask_t irq = 0;
   sx126x_get_and_clear_irq_status(&context, &irq);
 
-  sx126x_print_decoded_irq(irq);
+  debug("%s\n", IRQ_STR[irq]);
 
   // TODO: handle multiple interrupts at the same time
   if (irq == SX126X_IRQ_TX_DONE) {
@@ -472,8 +472,6 @@ void core1_entry() {
 }
 
 int main() {
-  sx126x_errors_mask_t errors = 0;
-  sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
   message_t message;
 
   setup_io();

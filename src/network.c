@@ -374,7 +374,7 @@ void handle_message(message_t *incoming) {
   } else if (incoming->mtype == MTYPE_PONG) {
     printf("rx: pong\n");
   } else if (incoming->mtype == MTYPE_TEXT) {
-    printf("rx: text: %s\n", TEXT_MESSAGES[incoming->data[0]]);
+    printf("rx: text: %s\n", TEXT_MESSAGE_STR[incoming->data[0]]);
   } else if (incoming->mtype == MTYPE_REQ) {
     printf("rx: request: %d\n", incoming->data[0]);
     if (incoming->data[0] == INFO_VERSION) {
