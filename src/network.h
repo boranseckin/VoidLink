@@ -91,6 +91,8 @@ typedef struct {
 } info_t;
 
 // Message structure.
+// On 32-bit arch of pico, this struct takes at least 4 words to allign properly.
+// For that reason, 3-bytes of extra data is already wasted so they are reserved for future use.
 typedef struct {
   uid_t dst;
   uid_t src;
@@ -98,6 +100,7 @@ typedef struct {
   salt_t salt;
   mtype_t mtype;
   flags_t flags;
+  uint8_t reserved[3];
   uint8_t data[3];
 } message_t;
 
