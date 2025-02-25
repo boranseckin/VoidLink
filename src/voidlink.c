@@ -96,7 +96,7 @@ void handle_rx_callback() {
 
   debug("<-");
   for (int i = 0; i < buffer_status.pld_len_in_bytes; i++) {
-    debug(" %d", ((uint8_t *)&rx_payload_buf)[i]);
+    debug(" %02x", ((uint8_t *)&rx_payload_buf)[i]);
   }
   debug("\n");
 
@@ -405,7 +405,7 @@ void transmit_string(char *string) { transmit_bytes((uint8_t *)string, strlen(st
 void transmit_packet(message_t *packet) {
   debug("->");
   for (int i = 0; i < sizeof(message_t); i++) {
-    debug(" %d", ((uint8_t *)packet)[i]);
+    debug(" %02x", ((uint8_t *)packet)[i]);
   }
   debug("\n");
 
