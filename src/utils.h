@@ -15,12 +15,26 @@
 #define debug(...)
 #endif
 
+#define info(...) printf(__VA_ARGS__)
+
 #define error(...) printf(__VA_ARGS__)
 
 #define _PRINT_DEFINE(x) #x
 #define PRINT_DEFINE(x) _PRINT_DEFINE(x)
 
 // Predefined modulation parameters
+typedef enum {
+  DEFAULT,
+  FAST,
+  LONGRANGE,
+} mod_params_t;
+
+static const char *MOD_PARAM_STR[] = {
+    [DEFAULT] = "DEFAULT",
+    [FAST] = "FAST",
+    [LONGRANGE] = "LONGRANGE",
+};
+
 static const sx126x_mod_params_lora_t MOD_PARAMS_DEFAULT = {
     .sf = SX126X_LORA_SF10,
     .bw = SX126X_LORA_BW_250,

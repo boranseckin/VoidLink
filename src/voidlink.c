@@ -18,10 +18,6 @@
 #include "utils.h"
 #include "voidlink.h"
 
-#define MOD_PARAMS MOD_PARAMS_DEFAULT
-// #define MOD_PARAMS MOD_PARAMS_FAST
-// #define MOD_PARAMS MOD_PARAMS_LONGRANGE
-
 // Debug flag to stop processing of received messages.
 bool STOP_PROCESSING = false;
 
@@ -60,6 +56,26 @@ typedef enum {
 static console_t console = CONSOLE_IDLE;
 
 static sx126x_hal_context_t context;
+
+sx126x_mod_params_lora_t mod_params = MOD_PARAMS_DEFAULT;
+
+void set_range(mod_params_t param) {
+  switch (param) {
+  case DEFAULT:
+    mod_params = MOD_PARAMS_DEFAULT;
+    break;
+  case FAST:
+    mod_params = MOD_PARAMS_FAST;
+    break;
+  case LONGRANGE:
+    mod_params = MOD_PARAMS_LONGRANGE;
+    break;
+  }
+
+  sx126x_set_lora_mod_params(&context, &mod_params);
+
+  debug("modulation parameters set to %s\n", MOD_PARAM_STR[param]);
+}
 
 void handle_tx_callback() {
   sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
@@ -318,7 +334,7 @@ void setup_sx126x() {
   sx126x_set_tx_params(&context, 0x16, SX126X_RAMP_40_US);
 
   // Setup the modulation parameters for LORA.
-  sx126x_set_lora_mod_params(&context, &MOD_PARAMS);
+  sx126x_set_lora_mod_params(&context, &mod_params);
 
   // Setup the packet parameters for LORA.
   sx126x_pkt_params_lora_t packet_params = {
@@ -333,8 +349,7 @@ void setup_sx126x() {
   // Setup the DIO1 pin to trigger for all interrupts.
   sx126x_set_dio_irq_params(&context, 0xFFFF, 0xFFFF, 0x0000, 0x0000);
 
-  debug("sx126x setup done [%s (%d ms)]\n", PRINT_DEFINE(MOD_PARAMS),
-        sx126x_get_lora_time_on_air_in_ms(&packet_params, &MOD_PARAMS));
+  debug("sx126x setup done\n");
 }
 
 void print_hello() {

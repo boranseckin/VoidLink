@@ -4,8 +4,11 @@
 #include <stdint.h>
 
 #include "network.h"
+#include "utils.h"
 
 extern bool STOP_PROCESSING;
+
+void set_range(mod_params_t param);
 
 void handle_tx_callback();
 void handle_rx_callback();

@@ -79,6 +79,16 @@ void handle_console_input() {
       } else {
         error("set stop requires a boolean value\n");
       }
+    } else if (strcmp(parts[1], "range") == 0) {
+      if (strcmp(parts[2], "default") == 0) {
+        set_range(DEFAULT);
+      } else if (strcmp(parts[2], "fast") == 0) {
+        set_range(FAST);
+      } else if (strcmp(parts[2], "longrange") == 0) {
+        set_range(LONGRANGE);
+      } else {
+        error("set range requires a valid range\n");
+      }
     } else {
       error("unknown set command\n");
     }
