@@ -8,7 +8,7 @@
 
 // Bump these versions according to the changes made.
 #define VERSION_MAJOR 0
-#define VERSION_MINOR 1
+#define VERSION_MINOR 2
 
 // Maximum number of messages that can be buffered in the queue (both rx and tx).
 #define MESSAGE_QUEUE_SIZE 8
@@ -116,15 +116,15 @@ message_t new_response_message(uid_t dst, info_key_t key, uint16_t value);
 message_t new_raw_message(uid_t dst, uint8_t *data[3]);
 
 void update_neighbour(uid_t uid, int8_t rssi);
-void get_neighbours(char *buffer);
+void print_neighbours();
 
 bool check_message_history(message_t msg);
-void get_message_history(char *buffer);
+void print_message_history();
 
 void add_ack(message_t *message);
 void remove_ack(mid_t mid);
 void check_ack_list();
-void get_acks(char *buffer);
+void print_acks();
 
 void try_transmit(message_t message);
 

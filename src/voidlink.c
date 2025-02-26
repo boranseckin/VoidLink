@@ -13,6 +13,7 @@
 #include "EPD_2in13_V4.h"
 #include "GUI_Paint.h"
 
+#include "console.h"
 #include "network.h"
 #include "utils.h"
 #include "voidlink.h"
@@ -50,6 +51,13 @@ typedef enum {
 
 // Current state of the screen state machine.
 static screen_t screen = SCREEN_IDLE;
+
+typedef enum {
+  CONSOLE_IDLE,
+  CONSOLE_READY,
+} console_t;
+
+static console_t console = CONSOLE_IDLE;
 
 static sx126x_hal_context_t context;
 
@@ -181,56 +189,32 @@ void handle_irq_callback(uint gpio, uint32_t events) {
 // USB uart RX callback.
 // printf does not work during this callback.
 void tud_cdc_rx_cb(uint8_t itf) {
-  // keep reading into a static buffer until carriage return
-  static char buf[64];
-  static uint8_t len = 0;
+  if (tud_cdc_available()) {
+    // Read into console buffer, starting from the last read position. This is important in case the
+    // tty is sending one character at a time instead of the whole line.
+    uint32_t count = tud_cdc_read(console_buffer + console_buffer_offset,
+                                  sizeof(console_buffer) - console_buffer_offset);
+    console_buffer_offset += count;
 
-  while (tud_cdc_available()) {
-    char c = tud_cdc_read_char();
-    if (c == '\r') {
-      buf[len] = 0;
-      len = 0;
+    // Echo back what we read.
+    tud_cdc_write(console_buffer + console_buffer_offset - count, count);
+    tud_cdc_write_flush();
 
-      tud_cdc_write_char('\r');
-      tud_cdc_write_char('\n');
+    // Check if we received a carriage return
+    for (int i = 0; i < count; i++) {
+      if (console_buffer[console_buffer_offset - count + i] == '\r') {
+        console_buffer[console_buffer_offset - count + i] = 0;
 
-      if (strncmp(buf, "ping", 4) == 0) {
-        if (strlen(buf) == 4) {
-          try_transmit(new_ping_message(get_broadcast_uid()));
-        } else {
-          uid_t dst = {.bytes = {0x00, 0x00, 0x00}};
-          sscanf(buf + 5, "%02hhx:%02hhx:%02hhx", &dst.bytes[0], &dst.bytes[1], &dst.bytes[2]);
-          try_transmit(new_ping_message(dst));
-        }
-      } else if (strncmp(buf, "hello", 7) == 0) {
-        try_transmit(new_hello_message());
-      } else if (strncmp(buf, "helloa", 7) == 0) {
-        message_t hello = new_hello_message();
-        hello.flags.ack_req = true;
-        try_transmit(hello);
-      } else if (strncmp(buf, "history", 7) == 0) {
-        char buffer[1024];
-        get_message_history(buffer);
-        tud_cdc_write_str(buffer);
-      } else if (strncmp(buf, "neighbour", 7) == 0) {
-        char buffer[1024];
-        get_neighbours(buffer);
-        tud_cdc_write_str(buffer);
-      } else if (strncmp(buf, "acks", 7) == 0) {
-        char buffer[1024];
-        get_acks(buffer);
-        tud_cdc_write_str(buffer);
-      } else if (strncmp(buf, "stop", 4) == 0) {
-        STOP = true;
-      } else if (strncmp(buf, "start", 5) == 0) {
-        STOP = false;
+        // Reset buffer offset, so that next command read will start from the beginning.
+        console_buffer_offset = 0;
+        // Indicate that we have new command ready to process.
+        console = CONSOLE_READY;
+
+        tud_cdc_write_char('\n');
+        tud_cdc_write_flush();
+
+        break;
       }
-
-      tud_cdc_write_flush();
-    } else {
-      buf[len++] = c;
-      tud_cdc_write_char(c);
-      tud_cdc_write_flush();
     }
   }
 }
@@ -533,5 +517,11 @@ int main() {
 
     // USB uart RX callback job
     tud_task();
+
+    // Process incoming console message
+    if (console == CONSOLE_READY) {
+      handle_console_input();
+      console = CONSOLE_IDLE;
+    }
   }
 }

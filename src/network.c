@@ -233,14 +233,12 @@ void update_neighbour(uid_t uid, int8_t rssi) {
         to_ms_since_boot(neighbour_table.neighbours[neighbour_table.count - 1].last_seen));
 }
 
-// Get the neighbours as a string.
-void get_neighbours(char *buffer) {
+// Print the neighbours list.
+void print_neighbours() {
   for (int i = 0; i < neighbour_table.count; i++) {
     neighbour_t *neighbour = &neighbour_table.neighbours[i];
     char *uid = uid_to_string(neighbour->uid);
-    sprintf(buffer, "%s: %d dBm, %d ms\r\n", uid, neighbour->rssi,
-            to_ms_since_boot(neighbour->last_seen));
-    buffer += strlen(buffer);
+    printf("%s: %d dBm, %d ms\r\n", uid, neighbour->rssi, to_ms_since_boot(neighbour->last_seen));
   }
 }
 
@@ -271,16 +269,15 @@ bool check_message_history(message_t msg) {
   return false;
 }
 
-// Get the message history as a string.
-void get_message_history(char *buffer) {
+// Print the message history.
+void print_message_history() {
   for (int i = 0; i < MAX_MESSAGE_HISTORY; i++) {
     if (message_history[i].src.bytes[0] == 0) {
       continue;
     }
     message_t *msg = &message_history[i];
     char *src = uid_to_string(msg->src);
-    sprintf(buffer, "%d: [%s] %d %d\r\n", i, src, msg->id, msg->salt);
-    buffer += strlen(buffer);
+    printf("%d: [%s] %d %d\r\n", i, src, msg->id, msg->salt);
   }
 }
 
@@ -332,17 +329,16 @@ void check_ack_list() {
   }
 }
 
-// Get the ack list as a string.
-void get_acks(char *buffer) {
+// Print the ack list.
+void print_acks() {
   for (int i = 0; i < MAX_MID; i++) {
     ack_t *ack = &ack_list[i];
     if (ack->timeout == 0) {
       continue;
     }
     char *dst = uid_to_string(ack->message.dst);
-    sprintf(buffer, "%d: [%s] %d (%llu sec)\r\n", i, dst, ack->message.mtype,
-            absolute_time_diff_us(get_absolute_time(), ack->timeout) / 1000 / 1000);
-    buffer += strlen(buffer);
+    printf("%d: [%s] %d (%llu sec)\r\n", i, dst, ack->message.mtype,
+           absolute_time_diff_us(get_absolute_time(), ack->timeout) / 1000 / 1000);
   }
 }
 
