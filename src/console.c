@@ -5,6 +5,7 @@
 #include "console.h"
 #include "network.h"
 #include "utils.h"
+#include "voidlink.h"
 
 char console_buffer[CONSOLE_BUFFER_SIZE];
 uint8_t console_buffer_offset;
@@ -39,7 +40,7 @@ void handle_console_input() {
 
   if (strcmp(parts[0], "hello") == 0) {
     message_t hello = new_hello_message();
-    if (parts[1] != NULL && strcmp(parts[1], "ack") == 0) {
+    if (strcmp(parts[1], "ack") == 0) {
       hello.flags.ack_req = true;
     }
     try_transmit(hello);
@@ -70,8 +71,17 @@ void handle_console_input() {
     try_transmit(new_request_message(dst, key));
 
   } else if (strcmp(parts[0], "set") == 0) {
-    // TODO
-    error("unknown set command\n");
+    if (strcmp(parts[1], "stop") == 0) {
+      if (strcmp(parts[2], "true") == 0) {
+        STOP_PROCESSING = true;
+      } else if (strcmp(parts[2], "false") == 0) {
+        STOP_PROCESSING = false;
+      } else {
+        error("set stop requires a boolean value\n");
+      }
+    } else {
+      error("unknown set command\n");
+    }
 
   } else if (strcmp(parts[0], "get") == 0) {
     if (strcmp(parts[1], "messages") == 0) {

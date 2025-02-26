@@ -23,7 +23,7 @@
 // #define MOD_PARAMS MOD_PARAMS_LONGRANGE
 
 // Debug flag to stop processing of received messages.
-static bool STOP = false;
+bool STOP_PROCESSING = false;
 
 // ((EPD_2in13_V4_WIDTH % 8 == 0) ? (EPD_2in13_V4_WIDTH / 8) : (EPD_2in13_V4_WIDTH / 8 + 1)) *
 // EPD_2in13_V4_HEIGHT = 4080
@@ -469,7 +469,7 @@ int main() {
 
   while (true) {
     // Process one previously received message.
-    if (!STOP && queue_try_remove(&rx_queue, &message)) {
+    if (!STOP_PROCESSING && queue_try_remove(&rx_queue, &message)) {
       debug("rx dequeue %d\n", message.id);
       // Update the message history with the received message.
       // If the message is already received, ignore it.

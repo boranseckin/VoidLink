@@ -5,6 +5,8 @@
 
 #include "network.h"
 
+extern bool STOP_PROCESSING;
+
 void handle_tx_callback();
 void handle_rx_callback();
 
