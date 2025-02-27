@@ -25,12 +25,15 @@ static uint8_t image[IMAGE_SIZE];
 static uint8_t wakeup[IMAGE_SIZE];
 static uint8_t message_Cursor = 0;
 static uint8_t home_Cursor = 0;
+static uint8_t settings_Cursor = 0;
+static uint8_t set_Info_Cursor = 2;
+static uint8_t temp_Cursor;
 static uint8_t received_Cursor = 0;
 int received_Page = 1;
 alarm_id_t alarm_id;
 int refresh_Counter = 0;
 volatile bool five_Seconds = true;
-static uint32_t display_Timeout = 7000;
+static uint32_t display_Timeout = 10000;
 //character array to store received messages
 char saved_Messages[16][PAYLOAD_BUFFER_SIZE + 4];
 char test [7];
@@ -72,6 +75,7 @@ typedef enum {
   DISPLAY_RXMSG,
   DISPLAY_NEIGHBOURS,
   DISPLAY_SETTINGS,
+  DISPLAY_SETTINGS_INFO,
 } display_t;
 
 static display_t display = DISPLAY_HOME;
@@ -230,10 +234,10 @@ void neighbours_Screen(){
   Paint_Clear(WHITE);
 
   // Draw message selection screen
-  Paint_DrawString_EN(0, 10, "Received Messages:", &Font16, BLACK, WHITE);
-  for (int i = 0; i < msg_Number; i++){
-    Paint_DrawString_EN(0, 34 + i * 24, saved_Messages[i], &Font16, BLACK, WHITE);
-  }
+  Paint_DrawRectangle(15,29,150,49,BLACK,DOT_PIXEL_2X2,DRAW_FILL_EMPTY);
+  Paint_DrawString_EN(20, 34, "Neighbours", &Font16, BLACK, WHITE);
+  Paint_DrawRectangle(15,101,150,121,BLACK,DOT_PIXEL_2X2,DRAW_FILL_EMPTY);
+  Paint_DrawString_EN(20, 106, "Broadcast", &Font16, BLACK, WHITE);
 }
 
 void home_Screen(){
@@ -243,33 +247,91 @@ void home_Screen(){
   // Paint the whole frame white
   Paint_Clear(WHITE); //Just do for first time setup
 
-  // Draw message selection screen
+  //SETTINGS SELECTED
   if (home_Cursor==1) {
-            //select next screen
-            Paint_Clear(WHITE);
-            Paint_DrawRectangle(50,50,80,80,BLACK,DOT_PIXEL_2X2,DRAW_FILL_EMPTY);
-            Paint_DrawString_EN(57, 57, "M", &Font20, BLACK, WHITE);
-            Paint_DrawString_EN(37, 82, "Messages", &Font12, WHITE, WHITE);
-            Paint_DrawRectangle(100,50,130,80,BLACK,DOT_PIXEL_2X2,DRAW_FILL_FULL);
-            Paint_DrawString_EN(107, 57, "S", &Font20, WHITE, WHITE);
-            Paint_DrawString_EN(86, 82, "Settings", &Font12, BLACK, WHITE);
-          }
-  else{
+    //select next screen
+    Paint_Clear(WHITE);
+    Paint_DrawRectangle(50,50,80,80,BLACK,DOT_PIXEL_2X2,DRAW_FILL_EMPTY);
+    Paint_DrawString_EN(57, 57, "M", &Font20, BLACK, WHITE);
+    Paint_DrawString_EN(37, 85, "Messages", &Font12, WHITE, WHITE);
+    Paint_DrawRectangle(100,50,130,80,BLACK,DOT_PIXEL_2X2,DRAW_FILL_FULL);
+    Paint_DrawString_EN(107, 57, "S", &Font20, WHITE, WHITE);
+    Paint_DrawString_EN(86, 85, "Settings", &Font12, BLACK, WHITE);
+    Paint_DrawRectangle(150,50,180,80,BLACK,DOT_PIXEL_2X2,DRAW_FILL_EMPTY);
+    Paint_DrawString_EN(157, 57, "N", &Font20, BLACK, WHITE);
+    Paint_DrawString_EN(132, 85, "Neighbours", &Font12, WHITE, WHITE);
+  }
+  //MESSAGES SELECTED
+  if (home_Cursor==0) {
+    //select next screen
+    Paint_Clear(WHITE);
     Paint_DrawRectangle(50,50,80,80,BLACK,DOT_PIXEL_2X2,DRAW_FILL_FULL);
     Paint_DrawString_EN(57, 57, "M", &Font20, WHITE, WHITE);
-    Paint_DrawString_EN(37, 82, "Messages", &Font12, BLACK, WHITE);
+    Paint_DrawString_EN(37, 85, "Messages", &Font12, BLACK, WHITE);
     Paint_DrawRectangle(100,50,130,80,BLACK,DOT_PIXEL_2X2,DRAW_FILL_EMPTY);
     Paint_DrawString_EN(107, 57, "S", &Font20, BLACK, WHITE);
-    Paint_DrawString_EN(83, 82, "Settings", &Font12, WHITE, WHITE);
+    Paint_DrawString_EN(83, 85, "Settings", &Font12, WHITE, WHITE);
+    Paint_DrawRectangle(150,50,180,80,BLACK,DOT_PIXEL_2X2,DRAW_FILL_EMPTY);
+    Paint_DrawString_EN(157, 57, "N", &Font20, BLACK, WHITE);
+    Paint_DrawString_EN(132, 85, "Neighbours", &Font12, WHITE, WHITE);
+  }
+  //NEIGHBOURS SELECTED
+  if (home_Cursor==2){
+    Paint_Clear(WHITE);
+    Paint_DrawRectangle(50,50,80,80,BLACK,DOT_PIXEL_2X2,DRAW_FILL_EMPTY);
+    Paint_DrawString_EN(57, 57, "M", &Font20, BLACK, WHITE);
+    Paint_DrawString_EN(37, 85, "Messages", &Font12, WHITE, WHITE);
+    Paint_DrawRectangle(100,50,130,80,BLACK,DOT_PIXEL_2X2,DRAW_FILL_EMPTY);
+    Paint_DrawString_EN(107, 57, "S", &Font20, BLACK, WHITE);
+    Paint_DrawString_EN(83, 85, "Settings", &Font12, WHITE, WHITE);
+    Paint_DrawRectangle(150,50,180,80,BLACK,DOT_PIXEL_2X2,DRAW_FILL_FULL);
+    Paint_DrawString_EN(157, 57, "N", &Font20, WHITE, WHITE);
+    Paint_DrawString_EN(132, 85, "Neighbours", &Font12, BLACK, WHITE);
   }
   if (new_Msg > 0){
     if (new_Msg == 1) {
-      Paint_DrawString_EN(105, 110," new message", &Font12, BLACK, WHITE);
+      Paint_DrawString_EN(95, 110," new message", &Font12, BLACK, WHITE);
     }
     else {
-      Paint_DrawString_EN(105, 110," new messages", &Font12, BLACK, WHITE);
+      Paint_DrawString_EN(95, 110," new messages", &Font12, BLACK, WHITE);
     }
-    Paint_DrawNum(100, 110, new_Msg, &Font12, WHITE, BLACK);
+    Paint_DrawNum(90, 110, new_Msg, &Font12, WHITE, BLACK);
+  }
+
+  //Draw version number
+  Paint_DrawString_EN(0, 0, "V/ink v1.0", &Font12, BLACK, WHITE);
+
+  //Draw nearby nodes, replace with network code
+  Paint_DrawString_EN(110, 0, "2 Nearby Nodes", &Font12, BLACK, WHITE);
+}
+
+void settings_Info(){
+  Paint_SelectImage(image);
+  if(settings_Cursor==0){
+    //clear screen
+    Paint_ClearWindows(170, 34, 300, 50, WHITE);
+    //refresh display
+    EPD_2in13_V4_Display_Partial(image);
+    Paint_DrawString_EN(200, 26, "^", &Font12, BLACK, WHITE);
+    Paint_DrawString_EN(200, 44, "v", &Font12, BLACK, WHITE);
+    if (set_Info_Cursor == 0){
+      Paint_DrawString_EN(170, 34, "    Never", &Font12, BLACK, WHITE);
+    }
+    else if (set_Info_Cursor == 1){
+      Paint_DrawString_EN(170, 34, "5 Seconds", &Font12, BLACK, WHITE);
+    }
+    else if (set_Info_Cursor == 2){
+      Paint_DrawString_EN(170, 34, "10 Seconds", &Font12, BLACK, WHITE);
+    }
+    else if (set_Info_Cursor == 3){
+      Paint_DrawString_EN(170, 34, "30 Seconds", &Font12, BLACK, WHITE);
+    }
+    else if (set_Info_Cursor == 4){
+      Paint_DrawString_EN(170, 34, "1 Minute", &Font12, BLACK, WHITE);
+    }
+    else if (set_Info_Cursor == 5){
+      Paint_DrawString_EN(170, 34, "2 Minutes", &Font12, BLACK, WHITE);
+    }
   }
 }
 
@@ -280,13 +342,25 @@ void settings_Screen(){
   Paint_Clear(WHITE);
 
   // Draw message selection screen
-  Paint_DrawString_EN(0, 10, "Settings:", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 34, "1. Display Timeout", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 58, "2. Network Settings", &Font16, BLACK, WHITE);
-  Paint_DrawString_EN(20, 82, "3. Mode", &Font16, BLACK, WHITE);
+  Paint_DrawString_EN(0, 5, "Settings:", &Font16, BLACK, WHITE);
+
+  if (settings_Cursor == 0){
+  Paint_DrawRectangle(5,29,155,50,BLACK,DOT_PIXEL_2X2,DRAW_FILL_FULL);
+  Paint_DrawString_EN(10, 34, "Sleep Timeout", &Font16, WHITE, WHITE);
+  Paint_DrawRectangle(5,58,155,84,BLACK,DOT_PIXEL_2X2,DRAW_FILL_EMPTY);
+  Paint_DrawString_EN(10, 63, "Mode", &Font16, BLACK, WHITE);
+  }
+
+  if (settings_Cursor == 1){
+    Paint_DrawRectangle(5,29,155,50,BLACK,DOT_PIXEL_2X2,DRAW_FILL_EMPTY);
+    Paint_DrawString_EN(10, 34, "Sleep Timeout", &Font16, BLACK, WHITE);
+    Paint_DrawRectangle(5,58,155,84,BLACK,DOT_PIXEL_2X2,DRAW_FILL_FULL);
+    Paint_DrawString_EN(10, 63, "Mode", &Font16, WHITE, WHITE);
+    }
+  //Paint_DrawString_EN(5, 82, "Mode", &Font16, BLACK, WHITE);
 
   // Display cursor
-  Paint_DrawString_EN(0, 34, ">", &Font16, BLACK, WHITE);
+  //Paint_DrawString_EN(0, 34, ">", &Font16, BLACK, WHITE);
 }
 
 void handle_button_callback(uint gpio, uint32_t events) {
@@ -298,14 +372,14 @@ void handle_button_callback(uint gpio, uint32_t events) {
       case DISPLAY_HOME:
           printf("On Home Screen.\n"); //For testing purposes
           // Add selection drawings for home screen
-          home_Cursor = (home_Cursor + 1) % 2;
+          home_Cursor = (home_Cursor + 1) % 3;
           home_Screen();
           printf("new msgs: %d\n",new_Msg); //For testing purposes
           screen = SCREEN_DRAW_READY;
           break;
       case DISPLAY_RXMSG:
           printf("On Received Messages Screen.\n"); //For testing purposes
-          // Add selection drawings for received messages screen
+          // Reset cursor if moving to new page
           if (received_Cursor == 2 && (msg_Number- (received_Page-1)*3)> 3){
             received_Page++;
             received_Cursor = 0;
@@ -331,6 +405,16 @@ void handle_button_callback(uint gpio, uint32_t events) {
       case DISPLAY_SETTINGS:
           printf("On Settings Screen.\n"); //For testing purposes
           // Add selection drawings for settings screen
+          settings_Cursor = (settings_Cursor + 1) % 2;
+          settings_Screen();
+          screen = SCREEN_DRAW_READY;
+          break;
+      case DISPLAY_SETTINGS_INFO:
+          printf("On Settings Info Screen.\n"); //For testing purposes
+          // Add selection drawings for settings screen
+          set_Info_Cursor = (set_Info_Cursor + 1) % 6;
+          settings_Info();
+          screen = SCREEN_DRAW_READY;
           break;
 
       case DISPLAY_NEIGHBOURS:
@@ -356,6 +440,12 @@ void handle_button_callback(uint gpio, uint32_t events) {
             refresh_Counter = 15;
             screen = SCREEN_DRAW_READY;
           }
+          if (home_Cursor == 2){ //Go to neighbours screen
+            display = DISPLAY_NEIGHBOURS;
+            neighbours_Screen();
+            refresh_Counter = 15;
+            screen = SCREEN_DRAW_READY;
+          }
           break;
       case DISPLAY_RXMSG:
           // Add selection drawings for received messages screen
@@ -369,6 +459,37 @@ void handle_button_callback(uint gpio, uint32_t events) {
       case DISPLAY_SETTINGS:
           //printf("On Settings Screen."); //For testing purposes
           // Add selection drawings for settings screen
+          temp_Cursor = set_Info_Cursor;
+          display = DISPLAY_SETTINGS_INFO;
+          settings_Info();
+          //refresh_Counter = 15;
+          screen = SCREEN_DRAW_READY;
+          break;
+
+      case DISPLAY_SETTINGS_INFO:
+          //Set display timeout
+          settings_Screen();
+          display = DISPLAY_SETTINGS;
+          refresh_Counter = 15;
+          screen = SCREEN_DRAW_READY;
+          if (set_Info_Cursor == 0){
+            display_Timeout = 0;
+          }
+          if (set_Info_Cursor == 1){
+            display_Timeout = 5000;
+          }
+          if (set_Info_Cursor == 2){
+            display_Timeout = 10000;
+          }
+          if (set_Info_Cursor == 3){
+            display_Timeout = 30000;
+          }
+          if (set_Info_Cursor == 4){
+            display_Timeout = 60000;
+          }
+          if (set_Info_Cursor == 5){
+            display_Timeout = 120000;
+          }
           break;
 
       case DISPLAY_NEIGHBOURS:
@@ -417,9 +538,21 @@ void handle_button_callback(uint gpio, uint32_t events) {
           screen = SCREEN_DRAW_READY;
           break;
 
+      case DISPLAY_SETTINGS_INFO:
+          set_Info_Cursor = temp_Cursor;
+          settings_Screen();
+          display = DISPLAY_SETTINGS;
+          refresh_Counter = 15;
+          screen = SCREEN_DRAW_READY;
+          break;
+
       case DISPLAY_NEIGHBOURS:
           //printf("On Neighbours Screen."); //For testing purposes
           // Add selection drawings for neighbours screen
+          display = DISPLAY_HOME;
+          home_Screen();
+          refresh_Counter = 15;
+          screen = SCREEN_DRAW_READY;
           break;
       }
   }
@@ -611,7 +744,12 @@ void receive_cont() {
 // Function to be called after 5 seconds if the flag isn't set
 int64_t alarm_callback(alarm_id_t id, void *user_data) {
   five_Seconds = true;
-  printf("7 Seconds of inactivity, sleeping display.\n");
+  printf("%d Seconds of inactivity, sleeping display.\n", display_Timeout/1000);
+  Paint_SelectImage(image);
+  //partial display refresh
+  Paint_DrawString_EN(230, 0, "SLP", &Font12, WHITE, BLACK);
+  EPD_2in13_V4_Display_Partial(image);
+  sleep_ms(100);
   EPD_2in13_V4_Sleep();
   sleep_ms(100);
   return 0; // Returning 0 cancels the alarm
@@ -654,6 +792,7 @@ void core1_entry() {
       if (five_Seconds){
         EPD_2in13_V4_Init_Fast();
         printf("Waking display.\n");
+        Paint_ClearWindows(250, 0, 350, 20, WHITE);
         EPD_2in13_V4_Display_Fast(image);
       }
       if (refresh_Counter == 15) {
