@@ -251,7 +251,7 @@ void print_neighbours() {
       continue;
     }
     char *uid = uid_to_string(neighbour->uid);
-    printf("%s: %d dBm, %d ms, v%d.%d\r\n", uid, neighbour->rssi,
+    printf("- [%s]: %ddBm, %dms, v%d.%d\r\n", uid, neighbour->rssi,
            to_ms_since_boot(neighbour->last_seen), neighbour->version_major,
            neighbour->version_minor);
   }
@@ -292,7 +292,7 @@ void print_message_history() {
     }
     message_t *msg = &message_history[i];
     char *src = uid_to_string(msg->src);
-    printf("%d: [%s] %d\r\n", i, src, msg->id);
+    printf("- [%d]: %s %s %d\r\n", i, src, MTYPE_STR[msg->mtype], msg->id);
   }
 }
 
@@ -372,8 +372,9 @@ void print_acks() {
       continue;
     }
     char *dst = uid_to_string(ack->message.dst);
-    printf("%d: [%s] %d (%llu sec / %d retries)\r\n", i, dst, ack->message.mtype,
-           absolute_time_diff_us(get_absolute_time(), ack->timeout) / 1000 / 1000, ack->retries);
+    printf("- [%d]: %s %s (%d/%d retries | %llusec)\r\n", i, dst, MTYPE_STR[ack->message.mtype],
+           ack->retries, ACK_MAX_RETRIES,
+           absolute_time_diff_us(get_absolute_time(), ack->timeout) / 1000 / 1000);
   }
 }
 
