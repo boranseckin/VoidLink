@@ -276,15 +276,19 @@ void print_message_history() {
   }
 }
 
-// Messages with timeout values for ack.
-// TODO: max_retries
+// Messages with timeout and retry values for ack.
+// Entry is invalid if `timeout` == 0.
 typedef struct {
   message_t message;
   absolute_time_t timeout;
+  uint8_t retries;
 } ack_t;
 
 // Timeout value for non-acked messages.
-#define ACK_TIMEOUT 1000 * 60 // 1 minute
+#define ACK_TIMEOUT 1000 * 30 // 30 seconds
+
+// Number of tries before we give up on the message.
+#define ACK_MAX_RETRIES 5
 
 // Ack list to keep track of messages that need to be acked.
 // Each message is indexed by its mid.
@@ -294,8 +298,17 @@ ack_t ack_list[MAX_MID] = {0};
 // Add an ack to the list.
 void add_ack(message_t *message) {
   ack_t *ack = &ack_list[message->id];
+
+  // Check if this is a new ack entry.
+  if (ack->timeout == 0) {
+    ack->retries = ACK_MAX_RETRIES;
+  } else {
+    ack->retries--;
+  }
+
   ack->message = *message;
   ack->timeout = make_timeout_time_ms(ACK_TIMEOUT);
+
   debug("ack added %d\n", message->id);
 }
 
@@ -315,10 +328,16 @@ void check_ack_list() {
     }
 
     // Add the message back to the transmit queue
-    debug("ack timeout %d\n", ack->message.id);
+    debug("ack timeout %d (%d retries left)\n", ack->message.id, ack->retries);
+
+    if (ack->retries < 1) {
+      debug("maximum number of retries (%d) reached for ack, dropping", ACK_MAX_RETRIES);
+      remove_ack(ack->message.id);
+      continue;
+    }
+
     if (queue_try_add(&tx_queue, &ack->message)) {
       debug("tx enqueue (from ack timeout) %d\n", ack->message.id);
-      ack->timeout = make_timeout_time_ms(ACK_TIMEOUT);
     } else {
       error("tx queue is full (from ack timeout)\n");
     }
