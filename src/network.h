@@ -111,7 +111,7 @@ message_t new_request_message(uid_t dst, info_key_t key);
 message_t new_response_message(uid_t dst, info_key_t key, uint16_t value);
 message_t new_raw_message(uid_t dst, uint8_t *data[3]);
 
-void update_neighbour(uid_t uid, int8_t rssi);
+void update_neighbour(uid_t uid, int8_t rssi, uint16_t version);
 void print_neighbours();
 
 bool check_message_history(message_t msg);

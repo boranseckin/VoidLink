@@ -188,10 +188,11 @@ message_t new_raw_message(uid_t dst, uint8_t *data[3]) {
 #define MAX_NEIGHBOURS 16
 
 // Neighbour information.
-// TODO: add fields to save information about the neighbour (e.g. version)
 typedef struct {
   uid_t uid;
   int8_t rssi;
+  uint8_t version_major;
+  uint8_t version_minor;
   absolute_time_t last_seen;
 } neighbour_t;
 
@@ -204,37 +205,55 @@ typedef struct {
 static neighbour_table_t neighbour_table = {.neighbours = {0}, .count = 0};
 
 // Update (or add) a neighbour to the table.
-void update_neighbour(uid_t uid, int8_t rssi) {
+void update_neighbour(uid_t uid, int8_t rssi, uint16_t version) {
+  // Check if we can find the neighbour in the list
+  int8_t index = -1;
   for (int i = 0; i < neighbour_table.count; i++) {
     if (memcmp(&neighbour_table.neighbours[i].uid, &uid, sizeof(uid_t)) == 0) {
-      neighbour_table.neighbours[i].rssi = rssi;
-      neighbour_table.neighbours[i].last_seen = get_absolute_time();
-      debug("neighbour %s updated (rssi: %d, ts: %dms)\n", uid_to_string(uid), rssi,
-            to_ms_since_boot(neighbour_table.neighbours[neighbour_table.count - 1].last_seen));
-      return;
+      index = i;
+      break;
     }
   }
 
-  if (neighbour_table.count >= MAX_NEIGHBOURS) {
-    // TODO: periodic cleanup of the neighbour table
-    error("neighbour table full\n");
-    return;
+  // If not found, try to add a new entry
+  if (index == -1) {
+    // Check if we have space for a new neighbour
+    if (neighbour_table.count >= MAX_NEIGHBOURS) {
+      // TODO: periodic cleanup of the neighbour table
+      error("neighbour table full\n");
+      return;
+    }
+
+    index = neighbour_table.count++;
   }
 
-  neighbour_table.neighbours[neighbour_table.count].uid = uid;
-  neighbour_table.neighbours[neighbour_table.count].rssi = rssi;
-  neighbour_table.neighbours[neighbour_table.count].last_seen = get_absolute_time();
-  neighbour_table.count++;
-  debug("neighbour %s added (rssi: %d, ts: %dms)\n", uid_to_string(uid), rssi,
-        to_ms_since_boot(neighbour_table.neighbours[neighbour_table.count - 1].last_seen));
+  neighbour_table.neighbours[index].uid = uid;
+  if (rssi != 0) {
+    neighbour_table.neighbours[index].rssi = rssi;
+  }
+  if (version != 0) {
+    neighbour_table.neighbours[index].version_major = version >> 8;
+    neighbour_table.neighbours[index].version_minor = version & 0xFF;
+  }
+  neighbour_table.neighbours[index].last_seen = get_absolute_time();
+
+  debug("neighbour %s updated (rssi: %d, ts: %dms, vs: %d.%d)\n", uid_to_string(uid), rssi,
+        to_ms_since_boot(neighbour_table.neighbours[index].last_seen), version >> 8,
+        version & 0xFF);
 }
 
 // Print the neighbours list.
 void print_neighbours() {
   for (int i = 0; i < neighbour_table.count; i++) {
     neighbour_t *neighbour = &neighbour_table.neighbours[i];
+    if (neighbour->uid.bytes[0] == 0 && neighbour->uid.bytes[1] == 0 &&
+        neighbour->uid.bytes[2] == 0) {
+      continue;
+    }
     char *uid = uid_to_string(neighbour->uid);
-    printf("%s: %d dBm, %d ms\r\n", uid, neighbour->rssi, to_ms_since_boot(neighbour->last_seen));
+    printf("%s: %d dBm, %d ms, v%d.%d\r\n", uid, neighbour->rssi,
+           to_ms_since_boot(neighbour->last_seen), neighbour->version_major,
+           neighbour->version_minor);
   }
 }
 
@@ -251,6 +270,7 @@ static uint8_t message_history_head = 0;
 bool check_message_history(message_t msg) {
   for (int i = 0; i < MAX_MESSAGE_HISTORY; i++) {
     // Do a full memcmp of the message, because why not...
+    // TODO: hop_limit might cause an issue here
     if (memcmp(&message_history[i], &msg, sizeof(message_t)) == 0) {
       debug("message %d from %s already received\n", msg.id, uid_to_string(msg.src));
       return true;
@@ -404,6 +424,7 @@ void handle_message(message_t *incoming) {
       try_transmit(
           new_response_message(incoming->src, INFO_VERSION, VERSION_MAJOR << 8 | VERSION_MINOR));
     } else if (incoming->data[0] == INFO_UPTIME) {
+      // TODO: FIX int overflow
       try_transmit(
           new_response_message(incoming->src, INFO_UPTIME, to_ms_since_boot(get_absolute_time())));
     } else {
@@ -411,6 +432,10 @@ void handle_message(message_t *incoming) {
     }
   } else if (incoming->mtype == MTYPE_RES) {
     printf("rx: response: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
+    if (incoming->data[0] == INFO_VERSION) {
+      printf("version: %d.%d\n", incoming->data[1], incoming->data[2]);
+      update_neighbour(incoming->src, 0, (incoming->data[1] << 8) | incoming->data[2]);
+    }
   } else if (incoming->mtype == MTYPE_RAW) {
     printf("rx: raw: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
   }

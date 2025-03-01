@@ -137,7 +137,7 @@ void handle_rx_callback() {
   sx126x_get_lora_pkt_status(&context, &pkt_status);
 
   // Update the neighbour table with the information from received message.
-  update_neighbour(rx_payload_buf.src, pkt_status.signal_rssi_pkt_in_dbm);
+  update_neighbour(rx_payload_buf.src, pkt_status.signal_rssi_pkt_in_dbm, 0);
 
   // Check if the received message is for us.
   if (!is_broadcast(rx_payload_buf.dst) && !is_my_uid(rx_payload_buf.dst)) {
