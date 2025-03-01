@@ -24,6 +24,8 @@ static uid_t MY_UID = {.bytes = {0x00, 0x00, 0x00}};
 // Broadcast identifier.
 static const uid_t BROADCAST_UID = {.bytes = {0xFF, 0xFF, 0xFF}};
 
+static mid_t MID = 0;
+
 // Setup the network.
 void setup_network() {
   // It seems trying to read the unique id too early causes a crash.
@@ -35,6 +37,12 @@ void setup_network() {
   MY_UID.bytes[0] = board_id.id[5];
   MY_UID.bytes[1] = board_id.id[6];
   MY_UID.bytes[2] = board_id.id[7];
+
+  // Set starting message id to a random value.
+  // This is done to reduce the risk of getting our message ignored due to resetting the mid counter
+  // back to 0 on restart. There is still a chance to randomly pick the same number where we left
+  // off but this good tradeoff to keep the message small.
+  MID = get_rand_32() & 0xFF;
 
   // Setup the queues.
   queue_init(&tx_queue, sizeof(message_t), MESSAGE_QUEUE_SIZE);
@@ -63,18 +71,14 @@ bool is_my_uid(uid_t uid) { return memcmp(&uid, &MY_UID, sizeof(uid_t)) == 0; }
 bool is_broadcast(uid_t uid) { return memcmp(&uid, &BROADCAST_UID, sizeof(uid_t)) == 0; }
 
 // Maximum value for the message id.
-#define MAX_MID 16
+#define MAX_MID (1 << (sizeof(mid_t) * 8))
 
 // Returns the next message id.
 // Each call increments the id by one, wrapping around at MAX_MID.
 mid_t get_mid() {
-  static mid_t mid = 0;
-  mid = (mid + 1) % MAX_MID;
-  return mid;
+  MID = (MID + 1) % MAX_MID;
+  return MID;
 }
-
-// Return a randomly generated salt.
-salt_t get_salt() { return get_rand_32() & 0xFF; }
 
 // Forms a new ack message.
 message_t new_ack_message(uid_t dst, mid_t mid) {
@@ -82,9 +86,8 @@ message_t new_ack_message(uid_t dst, mid_t mid) {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
-      .salt = get_salt(),
       .mtype = MTYPE_ACK,
-      .flags = {.ack_req = false, .hop_limit = false},
+      .flags = {.ack_req = false, .hop_limit = 0},
       .data = {mid, 0x00, 0x00},
   };
   return msg;
@@ -96,9 +99,8 @@ message_t new_hello_message() {
       .dst = get_broadcast_uid(),
       .src = get_uid(),
       .id = get_mid(),
-      .salt = get_salt(),
       .mtype = MTYPE_HELLO,
-      .flags = {.ack_req = false, .hop_limit = false},
+      .flags = {.ack_req = false, .hop_limit = 0},
       .data = {0x00, 0x00, 0x00},
   };
   return msg;
@@ -110,9 +112,8 @@ message_t new_ping_message(uid_t dst) {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
-      .salt = get_salt(),
       .mtype = MTYPE_PING,
-      .flags = {.ack_req = false, .hop_limit = false},
+      .flags = {.ack_req = false, .hop_limit = 0},
       .data = {0x00, 0x00, 0x00},
   };
   return msg;
@@ -124,9 +125,8 @@ message_t new_pong_message(uid_t dst) {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
-      .salt = get_salt(),
       .mtype = MTYPE_PONG,
-      .flags = {.ack_req = false, .hop_limit = false},
+      .flags = {.ack_req = false, .hop_limit = 0},
       .data = {0x00, 0x00, 0x00},
   };
   return msg;
@@ -138,9 +138,8 @@ message_t new_text_message(uid_t dst, text_id_t id) {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
-      .salt = get_salt(),
       .mtype = MTYPE_TEXT,
-      .flags = {.ack_req = false, .hop_limit = false},
+      .flags = {.ack_req = false, .hop_limit = 0},
       .data = {id, 0x00, 0x00},
   };
   return msg;
@@ -152,9 +151,8 @@ message_t new_request_message(uid_t dst, info_key_t key) {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
-      .salt = get_salt(),
       .mtype = MTYPE_REQ,
-      .flags = {.ack_req = false, .hop_limit = false},
+      .flags = {.ack_req = false, .hop_limit = 0},
       .data = {key, 0x00, 0x00},
   };
   return msg;
@@ -166,9 +164,8 @@ message_t new_response_message(uid_t dst, info_key_t key, uint16_t value) {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
-      .salt = get_salt(),
       .mtype = MTYPE_RES,
-      .flags = {.ack_req = false, .hop_limit = false},
+      .flags = {.ack_req = false, .hop_limit = 0},
       .data = {key, (value >> 8) & 0xFF, (value & 0xFF)},
   };
   return msg;
@@ -180,9 +177,8 @@ message_t new_raw_message(uid_t dst, uint8_t *data[3]) {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
-      .salt = get_salt(),
       .mtype = MTYPE_RAW,
-      .flags = {.ack_req = false, .hop_limit = false},
+      .flags = {.ack_req = false, .hop_limit = 0},
   };
   memcpy(msg.data, data, 3);
   return msg;
@@ -250,13 +246,12 @@ static message_t message_history[MAX_MESSAGE_HISTORY] = {0};
 // Index of the next message to be added.
 static uint8_t message_history_head = 0;
 
-// Check if a message is already received using src, id and salt.
+// Check if a message is already received.
 // If not, add it to the history.
 bool check_message_history(message_t msg) {
   for (int i = 0; i < MAX_MESSAGE_HISTORY; i++) {
-    if (memcmp(&message_history[i].src, &msg.src, sizeof(uid_t)) == 0 &&
-        memcmp(&message_history[i].id, &msg.id, sizeof(mid_t)) == 0 &&
-        memcmp(&message_history[i].salt, &msg.salt, sizeof(salt_t)) == 0) {
+    // Do a full memcmp of the message, because why not...
+    if (memcmp(&message_history[i], &msg, sizeof(message_t)) == 0) {
       debug("message %d from %s already received\n", msg.id, uid_to_string(msg.src));
       return true;
     }
@@ -277,7 +272,7 @@ void print_message_history() {
     }
     message_t *msg = &message_history[i];
     char *src = uid_to_string(msg->src);
-    printf("%d: [%s] %d %d\r\n", i, src, msg->id, msg->salt);
+    printf("%d: [%s] %d\r\n", i, src, msg->id);
   }
 }
 
@@ -293,6 +288,7 @@ typedef struct {
 
 // Ack list to keep track of messages that need to be acked.
 // Each message is indexed by its mid.
+// TODO: probably use a linked list here
 ack_t ack_list[MAX_MID] = {0};
 
 // Add an ack to the list.

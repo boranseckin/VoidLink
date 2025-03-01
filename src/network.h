@@ -8,7 +8,7 @@
 
 // Bump these versions according to the changes made.
 #define VERSION_MAJOR 0
-#define VERSION_MINOR 2
+#define VERSION_MINOR 3
 
 // Maximum number of messages that can be buffered in the queue (both rx and tx).
 #define MESSAGE_QUEUE_SIZE 8
@@ -53,9 +53,6 @@ bool is_broadcast(uid_t uid);
 // Message ID.
 typedef uint8_t mid_t;
 
-// Message salt.
-typedef uint8_t salt_t;
-
 // Message types.
 typedef enum __attribute__((__packed__)) {
   MTYPE_ACK = 0,
@@ -72,8 +69,8 @@ typedef enum __attribute__((__packed__)) {
 typedef struct {
   // Indicates if an ACK is requested for this message.
   bool ack_req : 1;
-  // Indicates how many hops this message can travel.
-  bool hop_limit : 1;
+  // Indicates how many hops this message can travel (max 7 hops).
+  uint8_t hop_limit : 3;
 } flags_t;
 
 // Information types.
@@ -91,16 +88,15 @@ typedef struct {
 } info_t;
 
 // Message structure.
-// On 32-bit arch of pico, this struct takes at least 4 words to allign properly.
-// For that reason, 3-bytes of extra data is already wasted so they are reserved for future use.
+// On 32-bit architecture of pico, the struct needs to be aligned to 4-byte words.
+// The reserved data is for future expension.
 typedef struct {
   uid_t dst;
   uid_t src;
   mid_t id;
-  salt_t salt;
   mtype_t mtype;
   flags_t flags;
-  uint8_t reserved[3];
+  uint8_t reserved[4];
   uint8_t data[3];
 } message_t;
 
