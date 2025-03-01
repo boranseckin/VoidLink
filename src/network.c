@@ -352,8 +352,8 @@ void print_acks() {
       continue;
     }
     char *dst = uid_to_string(ack->message.dst);
-    printf("%d: [%s] %d (%llu sec)\r\n", i, dst, ack->message.mtype,
-           absolute_time_diff_us(get_absolute_time(), ack->timeout) / 1000 / 1000);
+    printf("%d: [%s] %d (%llu sec / %d retries)\r\n", i, dst, ack->message.mtype,
+           absolute_time_diff_us(get_absolute_time(), ack->timeout) / 1000 / 1000, ack->retries);
   }
 }
 
