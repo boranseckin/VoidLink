@@ -425,9 +425,10 @@ void handle_message(message_t *incoming) {
       try_transmit(
           new_response_message(incoming->src, INFO_VERSION, VERSION_MAJOR << 8 | VERSION_MINOR));
     } else if (incoming->data[0] == INFO_UPTIME) {
-      // TODO: FIX int overflow
-      try_transmit(
-          new_response_message(incoming->src, INFO_UPTIME, to_ms_since_boot(get_absolute_time())));
+      // Convert time in milliseconds to seconds.
+      uint32_t time_in_sec = to_ms_since_boot(get_absolute_time()) / 1000;
+      // Only send the lower 16 bits to save space.
+      try_transmit(new_response_message(incoming->src, INFO_UPTIME, time_in_sec & 0xFFFF));
     } else {
       try_transmit(new_response_message(incoming->src, incoming->data[0], 0));
     }
@@ -436,6 +437,8 @@ void handle_message(message_t *incoming) {
     if (incoming->data[0] == INFO_VERSION) {
       printf("version: %d.%d\n", incoming->data[1], incoming->data[2]);
       update_neighbour(incoming->src, 0, (incoming->data[1] << 8) | incoming->data[2]);
+    } else if (incoming->data[0] == INFO_UPTIME) {
+      printf("uptime: %d\n", (incoming->data[1] << 8) | incoming->data[2]);
     }
   } else if (incoming->mtype == MTYPE_RAW) {
     printf("rx: raw: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);

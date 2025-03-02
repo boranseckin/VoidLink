@@ -100,6 +100,8 @@ void handle_console_input() {
       print_neighbours();
     } else if (strcmp(parts[1], "acks") == 0) {
       print_acks();
+    } else if (strcmp(parts[1], "uptime") == 0) {
+      info("uptime: %ds\n", to_ms_since_boot(get_absolute_time()) / 1000);
     } else {
       error("unknown get command\n");
     }
