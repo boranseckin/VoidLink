@@ -124,6 +124,11 @@ void handle_rx_callback() {
   }
   debug("\n");
 
+  if (is_my_uid(rx_payload_buf.src)) {
+    debug("message from myself\n");
+    return;
+  }
+
   // Draw the received message on the e-paper display.
   // add "rx: " to the beginning of the payload
   // Paint_ClearWindows(0, 106, 122, 122, WHITE);
@@ -137,11 +142,22 @@ void handle_rx_callback() {
   sx126x_get_lora_pkt_status(&context, &pkt_status);
 
   // Update the neighbour table with the information from received message.
+  // TODO: ignore rssi for hopped messages
   update_neighbour(rx_payload_buf.src, pkt_status.signal_rssi_pkt_in_dbm, 0);
 
   // Check if the received message is for us.
-  if (!is_broadcast(rx_payload_buf.dst) && !is_my_uid(rx_payload_buf.dst)) {
-    debug("message not for me\n");
+  if (!is_my_uid(rx_payload_buf.dst) && !is_broadcast(rx_payload_buf.dst)) {
+    debug("message is not for me\n");
+
+    // Check if the message has remaining hops.
+    if (rx_payload_buf.flags.hop_limit > 0) {
+      rx_payload_buf.flags.hop_limit--;
+      debug("forwarding message (%d hops remaining)\n", rx_payload_buf.flags.hop_limit);
+      try_transmit(rx_payload_buf);
+    } else {
+      debug("not forwarding message, hop limit reached\n");
+    }
+
     return;
   }
 

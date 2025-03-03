@@ -102,6 +102,8 @@ typedef struct {
 
 void setup_network();
 
+bool compare_messages(message_t *a, message_t *b);
+
 message_t new_ack_message(uid_t dst, mid_t mid);
 message_t new_hello_message();
 message_t new_ping_message(uid_t dst);

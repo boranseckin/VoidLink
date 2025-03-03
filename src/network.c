@@ -80,6 +80,12 @@ mid_t get_mid() {
   return MID;
 }
 
+// Compare two messages.
+// Returns true if they are the same.
+bool compare_messages(message_t *a, message_t *b) {
+  return memcmp(&(a->src), &(b->src), sizeof(uid_t)) && a->id == b->id;
+}
+
 // Forms a new ack message.
 message_t new_ack_message(uid_t dst, mid_t mid) {
   message_t msg = {
@@ -113,7 +119,7 @@ message_t new_ping_message(uid_t dst) {
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_PING,
-      .flags = {.ack_req = false, .hop_limit = 0},
+      .flags = {.ack_req = false, .hop_limit = 3},
       .data = {0x00, 0x00, 0x00},
   };
   return msg;
@@ -269,9 +275,7 @@ static uint8_t message_history_head = 0;
 // If not, add it to the history.
 bool check_message_history(message_t msg) {
   for (int i = 0; i < MAX_MESSAGE_HISTORY; i++) {
-    // Do a full memcmp of the message, because why not...
-    // TODO: hop_limit might cause an issue here
-    if (memcmp(&message_history[i], &msg, sizeof(message_t)) == 0) {
+    if (compare_messages(&message_history[i], &msg)) {
       debug("message %d from %s already received\n", msg.id, uid_to_string(msg.src));
       return true;
     }
