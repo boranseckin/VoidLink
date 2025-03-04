@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "class/cdc/cdc_device.h"
+#include "hardware/timer.h"
 #include "pico/multicore.h"
 #include "pico/time.h"
 #include "pico/util/queue.h"
@@ -10,8 +11,8 @@
 #include "sx126x.h"
 #include "sx126x_hal_context.h"
 
-#include "EPD_2in13_V4.h"
-#include "GUI_Paint.h"
+#include "io.h"
+#include "screen.h"
 
 #include "console.h"
 #include "network.h"
@@ -20,12 +21,6 @@
 
 // Debug flag to stop processing of received messages.
 bool STOP_PROCESSING = false;
-
-// ((EPD_2in13_V4_WIDTH % 8 == 0) ? (EPD_2in13_V4_WIDTH / 8) : (EPD_2in13_V4_WIDTH / 8 + 1)) *
-// EPD_2in13_V4_HEIGHT = 4080
-#define IMAGE_SIZE 4080
-static uint8_t image[IMAGE_SIZE];
-static uint8_t cursor = 0;
 
 // Main state machine.
 typedef enum {
@@ -37,16 +32,6 @@ typedef enum {
 
 // Current state of the main state machine.
 static state_t state = STATE_IDLE;
-
-// Screen state machine
-typedef enum {
-  SCREEN_IDLE,
-  SCREEN_DRAW_READY,
-  SCREEN_DRAW,
-} screen_t;
-
-// Current state of the screen state machine.
-static screen_t screen = SCREEN_IDLE;
 
 typedef enum {
   CONSOLE_IDLE,
@@ -129,14 +114,6 @@ void handle_rx_callback() {
     return;
   }
 
-  // Draw the received message on the e-paper display.
-  // add "rx: " to the beginning of the payload
-  // Paint_ClearWindows(0, 106, 122, 122, WHITE);
-  // char payload_buf_with_rx[buffer_status.pld_len_in_bytes + 4];
-  // sprintf(payload_buf_with_rx, "rx: %s", rx_payload_buf);
-  // Paint_DrawString(0, 106, (char *)payload_buf_with_rx, &Font16, BLACK, WHITE);
-  // screen = SCREEN_DRAW_READY;
-
   // Get the packet status to learn the signal strength of the received message.
   sx126x_pkt_status_lora_t pkt_status = {0};
   sx126x_get_lora_pkt_status(&context, &pkt_status);
@@ -184,29 +161,6 @@ void handle_dio1_callback(uint gpio, uint32_t events) {
     handle_tx_callback();
   } else if (irq == SX126X_IRQ_RX_DONE) {
     handle_rx_callback();
-  }
-}
-
-void handle_button_callback(uint gpio, uint32_t events) {
-  if (screen != SCREEN_IDLE || state != STATE_RX)
-    return;
-
-  if (gpio == PIN_BUTTON_NEXT) {
-    cursor = (cursor + 1) % 3;
-    for (int i = 0; i < 3; i++) {
-      Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
-    }
-    Paint_DrawString(0, 34 + cursor * 24, ">", &Font16, BLACK, WHITE);
-    screen = SCREEN_DRAW_READY;
-  } else if (gpio == PIN_BUTTON_OK) {
-    if (cursor == 0) {
-      try_transmit(new_ping_message(get_broadcast_uid()));
-    } else if (cursor == 1) {
-      try_transmit((new_text_message(get_broadcast_uid(), TEXT_COPY)));
-    } else if (cursor == 2) {
-      try_transmit(new_request_message(get_broadcast_uid(), INFO_VERSION));
-    }
-  } else if (gpio == PIN_BUTTON_BACK) {
   }
 }
 
@@ -455,35 +409,11 @@ void receive_cont() {
 }
 
 void core1_entry() {
-  debug("core1 started\n");
-
-  // Create a new display buffer
-  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
-  // Paint the whole frame white
-  Paint_Clear(WHITE);
-
-  // Draw message selection screen
-  Paint_DrawString(0, 10, "Select a message:", &Font16, BLACK, WHITE);
-  Paint_DrawString(20, 34, "1. Send Ping", &Font16, BLACK, WHITE);
-  Paint_DrawString(20, 58, "2. Send \"COPY\"", &Font16, BLACK, WHITE);
-  Paint_DrawString(20, 82, "3. Request version", &Font16, BLACK, WHITE);
-
-  // Display cursor
-  Paint_DrawString(0, 34, ">", &Font16, BLACK, WHITE);
-
+  wakeup_Screen();
+  home_Screen();
   screen = SCREEN_DRAW_READY;
 
-  while (true) {
-    uint32_t flag = multicore_fifo_pop_blocking();
-
-    if (flag == 0) {
-      EPD_2in13_V4_Init();
-      EPD_2in13_V4_Display_Base(image);
-      EPD_2in13_V4_Sleep();
-      sleep_ms(100);
-      multicore_fifo_push_blocking_inline(0);
-    }
-  }
+  screen_draw_loop();
 }
 
 int main() {
@@ -493,6 +423,8 @@ int main() {
   setup_display();
   setup_sx126x();
   setup_network();
+
+  memset(new_Messages, 0, sizeof(new_Messages));
 
   multicore_launch_core1(core1_entry);
 
