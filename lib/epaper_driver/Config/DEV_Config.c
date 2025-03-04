@@ -70,7 +70,7 @@ void DEV_GPIO_Mode(UWORD Pin, UWORD Mode) {
 /**
  * delay x ms
  **/
-void DEV_Delay_ms(UDOUBLE xms) { sleep_ms(xms); }
+void DEV_Delay_ms(UDOUBLE xms) { busy_wait_ms(xms); }
 
 void DEV_GPIO_Init(void) {
   EPD_RST_PIN = 12;

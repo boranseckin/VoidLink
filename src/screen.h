@@ -26,29 +26,29 @@ extern display_t display;
 // ((EPD_2in13_V4_WIDTH % 8 == 0) ? (EPD_2in13_V4_WIDTH / 8) : (EPD_2in13_V4_WIDTH / 8 + 1)) *
 // EPD_2in13_V4_HEIGHT = 4080
 #define IMAGE_SIZE 4080
-static uint8_t image[IMAGE_SIZE];
-static uint8_t wakeup[IMAGE_SIZE];
+extern uint8_t image[IMAGE_SIZE];
+extern uint8_t wakeup[IMAGE_SIZE];
 
-static uint8_t message_Cursor = 0;
-static uint8_t home_Cursor = 0;
-static uint8_t settings_Cursor = 0;
-static uint8_t set_Info_Cursor = 2;
-static uint8_t msg_Action_Cursor = 0;
-static uint8_t temp_Cursor;
-static uint8_t received_Cursor = 0;
-static uint8_t received_Page = 1;
-static uint8_t refresh_Counter = 0;
-static uint32_t display_Timeout = 10000;
-static volatile bool five_Seconds = true;
+extern uint8_t message_Cursor;
+extern uint8_t home_Cursor;
+extern uint8_t settings_Cursor;
+extern uint8_t set_Info_Cursor;
+extern uint8_t msg_Action_Cursor;
+extern uint8_t temp_Cursor;
+extern uint8_t received_Cursor;
+extern uint8_t received_Page;
+extern uint8_t refresh_Counter;
+extern uint32_t display_Timeout;
+extern volatile bool five_Seconds;
 
 // character array to store received messages
-static char saved_Messages[16][255 + 4];
-static char test[7];
-static int new_Messages[16];
+extern char saved_Messages[16][255 + 4];
+extern char test[7];
+extern int new_Messages[16];
 
 // number of messages received
-static uint32_t msg_Number = 0;
-static uint32_t new_Msg = 0;
+extern uint32_t msg_Number;
+extern uint32_t new_Msg;
 
 void setup_display();
 

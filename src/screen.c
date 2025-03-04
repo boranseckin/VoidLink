@@ -1,4 +1,6 @@
+#include "hardware/timer.h"
 #include "pico/multicore.h"
+#include "pico/time.h"
 
 #include "EPD_2in13_V4.h"
 #include "GUI_Paint.h"
@@ -10,6 +12,28 @@ alarm_id_t alarm_id;
 
 screen_t screen = SCREEN_IDLE;
 display_t display = DISPLAY_HOME;
+
+uint8_t image[IMAGE_SIZE];
+uint8_t wakeup[IMAGE_SIZE];
+
+uint8_t message_Cursor = 0;
+uint8_t home_Cursor = 0;
+uint8_t settings_Cursor = 0;
+uint8_t set_Info_Cursor = 2;
+uint8_t msg_Action_Cursor = 0;
+uint8_t temp_Cursor = 0;
+uint8_t received_Cursor = 0;
+uint8_t received_Page = 1;
+uint8_t refresh_Counter = 0;
+uint32_t display_Timeout = 10000;
+volatile bool five_Seconds = true;
+
+char saved_Messages[16][255 + 4];
+char test[7];
+int new_Messages[16];
+
+uint32_t msg_Number = 0;
+uint32_t new_Msg = 0;
 
 void setup_display() {
   DEV_Module_Init();
@@ -281,9 +305,9 @@ int64_t alarm_callback(alarm_id_t id, void *user_data) {
   // partial display refresh
   Paint_DrawString(225, 0, "SLP", &Font12, WHITE, BLACK);
   EPD_2in13_V4_Display_Partial(image);
-  sleep_ms(100);
+  busy_wait_ms(100);
   EPD_2in13_V4_Sleep();
-  sleep_ms(100);
+  busy_wait_ms(100);
   return 0; // Returning 0 cancels the alarm
 }
 
@@ -301,11 +325,13 @@ void screen_draw_loop() {
   while (true) {
     uint32_t flag = multicore_fifo_pop_blocking();
 
+    printf("five_Seconds: %d\n", five_Seconds);
+
     if (flag == 0) {
       // Fast refresh on display wakup
       if (five_Seconds) {
-        EPD_2in13_V4_Init_Fast();
         printf("Waking display.\n");
+        EPD_2in13_V4_Init_Fast();
         Paint_ClearWindows(250, 0, 350, 20, WHITE);
         EPD_2in13_V4_Display_Fast(image);
       }
