@@ -40,8 +40,7 @@ typedef enum {
 static console_t console = CONSOLE_IDLE;
 
 static sx126x_hal_context_t context;
-
-sx126x_mod_params_lora_t mod_params = MOD_PARAMS_DEFAULT;
+static sx126x_mod_params_lora_t mod_params;
 
 void set_range(mod_params_t param) {
   switch (param) {
@@ -292,6 +291,9 @@ void setup_sx126x() {
   };
   sx126x_set_pa_cfg(&context, &pa_cfg);
   sx126x_set_tx_params(&context, 0x16, SX126X_RAMP_40_US);
+
+  // Initialize modulation parameters.
+  mod_params = MOD_PARAMS_DEFAULT;
 
   // Setup the modulation parameters for LORA.
   sx126x_set_lora_mod_params(&context, &mod_params);
