@@ -1,5 +1,11 @@
+#include <stdio.h>
+#include <string.h>
+
+#include "pico/stdlib.h"
+
 #include "io.h"
 #include "pico_config.h"
+#include "utils.h"
 
 void handle_button_callback(uint gpio, uint32_t events) {
   // if (screen != SCREEN_IDLE || (state != STATE_IDLE && state != STATE_RX))
@@ -41,7 +47,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
       //   for (int i = 0; i < 3; i++) {
       //     Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
       //   }
-      //   Paint_DrawString_EN(0, 34 + message_Cursor * 24, ">", &Font16, BLACK, WHITE);
+      //   Paint_DrawString(0, 34 + message_Cursor * 24, ">", &Font16, BLACK, WHITE);
       //   screen = SCREEN_DRAW_READY;
       //   break;
 

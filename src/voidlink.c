@@ -11,11 +11,10 @@
 #include "sx126x.h"
 #include "sx126x_hal_context.h"
 
-#include "io.h"
-#include "screen.h"
-
 #include "console.h"
+#include "io.h"
 #include "network.h"
+#include "screen.h"
 #include "utils.h"
 #include "voidlink.h"
 
@@ -242,15 +241,6 @@ void setup_io() {
   gpio_put(PICO_DEFAULT_LED_PIN, 1);
 
   debug("io setup done\n");
-}
-
-void setup_display() {
-  DEV_Module_Init();
-  EPD_2in13_V4_Init();
-  EPD_2in13_V4_Clear();
-  EPD_2in13_V4_Sleep();
-
-  debug("display setup done\n");
 }
 
 void setup_sx126x() {

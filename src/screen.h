@@ -8,7 +8,7 @@ typedef enum {
   SCREEN_DRAW,
 } screen_t;
 
-static screen_t screen = SCREEN_IDLE;
+extern screen_t screen;
 
 // display screens state machine
 typedef enum {
@@ -21,7 +21,7 @@ typedef enum {
   DISPLAY_SETTINGS_INFO,
 } display_t;
 
-static display_t display = DISPLAY_HOME;
+extern display_t display;
 
 // ((EPD_2in13_V4_WIDTH % 8 == 0) ? (EPD_2in13_V4_WIDTH / 8) : (EPD_2in13_V4_WIDTH / 8 + 1)) *
 // EPD_2in13_V4_HEIGHT = 4080
@@ -39,16 +39,18 @@ static uint8_t received_Cursor = 0;
 static uint8_t received_Page = 1;
 static uint8_t refresh_Counter = 0;
 static uint32_t display_Timeout = 10000;
-volatile bool five_Seconds = true;
+static volatile bool five_Seconds = true;
 
 // character array to store received messages
-char saved_Messages[16][255 + 4];
-char test[7];
-int new_Messages[16];
+static char saved_Messages[16][255 + 4];
+static char test[7];
+static int new_Messages[16];
 
 // number of messages received
-uint32_t msg_Number = 0;
-uint32_t new_Msg = 0;
+static uint32_t msg_Number = 0;
+static uint32_t new_Msg = 0;
+
+void setup_display();
 
 void wakeup_Screen();
 void msg_Screen();
