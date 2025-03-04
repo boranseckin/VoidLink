@@ -5,6 +5,7 @@
 #include "EPD_2in13_V4.h"
 #include "GUI_Paint.h"
 
+#include "network.h"
 #include "screen.h"
 #include "utils.h"
 
@@ -220,7 +221,9 @@ void home_Screen() {
   }
 
   // Draw version number
-  Paint_DrawString(0, 0, "V/ink v1.0", &Font12, BLACK, WHITE);
+  char version[12];
+  sprintf(version, "V/ink v%d.%d", VERSION_MAJOR, VERSION_MINOR);
+  Paint_DrawString(0, 0, version, &Font12, BLACK, WHITE);
 
   // Draw nearby nodes, replace with network code
   Paint_DrawString(110, 0, "2 Nearby Nodes", &Font12, BLACK, WHITE);
