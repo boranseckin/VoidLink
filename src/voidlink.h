@@ -1,5 +1,5 @@
-#ifndef VOIDLINK_H
-#define VOIDLINK_H
+#ifndef _VOIDLINK_H
+#define _VOIDLINK_H
 
 #include <stdint.h>
 
@@ -30,4 +30,4 @@ void receive_cont();
 
 void core1_entry();
 
-#endif // VOIDLINK_H
+#endif // _VOIDLINK_H

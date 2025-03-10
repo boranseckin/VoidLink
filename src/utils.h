@@ -1,5 +1,5 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef _UTILS_H
+#define _UTILS_H
 
 #include <stdio.h>
 
@@ -101,4 +101,4 @@ static const char *IRQ_STR[] = {
     [SX126X_IRQ_LR_FHSS_HOP] = "LR_FHSS_HOP",
 };
 
-#endif // UTILS_H
+#endif // _UTILS_H

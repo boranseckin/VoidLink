@@ -15,4 +15,4 @@ void parse_uid(uid_t *uid, char *string);
 void parse_uid_or_broadcast(uid_t *uid, char *string);
 void handle_console_input();
 
-#endif
+#endif // _CONSOLE_H

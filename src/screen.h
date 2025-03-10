@@ -1,5 +1,8 @@
-#ifndef SCREEN_H
-#define SCREEN_H
+#ifndef _SCREEN_H
+#define _SCREEN_H
+
+#include <stdbool.h>
+#include <stdint.h>
 
 // Screen state machine
 typedef enum {
@@ -65,4 +68,4 @@ void set_flag_and_reset_alarm();
 
 void screen_draw_loop();
 
-#endif
+#endif // _SCREEN_H

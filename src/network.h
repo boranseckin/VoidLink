@@ -1,5 +1,5 @@
-#ifndef NETWORK_H
-#define NETWORK_H
+#ifndef _NETWORK_H
+#define _NETWORK_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -128,4 +128,4 @@ void try_transmit(message_t message);
 
 void handle_message(message_t *incoming);
 
-#endif // NETWORK_H
+#endif // _NETWORK_H
