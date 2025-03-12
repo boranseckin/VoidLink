@@ -72,6 +72,9 @@ void handle_button_callback(uint gpio, uint32_t events) {
     case DISPLAY_NEIGHBOURS:
       printf("On Neighbours Screen.\n"); // For testing purposes
       // Add selection drawings for neighbours screen
+      neighbour_Cursor = (neighbour_Cursor + 1) % 2;
+      neighbours_Screen();
+      screen = SCREEN_DRAW_READY;
       break;
     }
 
@@ -179,6 +182,20 @@ void handle_button_callback(uint gpio, uint32_t events) {
     case DISPLAY_NEIGHBOURS:
       // printf("On Neighbours Screen."); //For testing purposes
       //  Add selection drawings for neighbours screen
+      //if (neighbour_Cursor == 0) {
+        // Go to neighbours table screen
+        //display = DISPLAY_NEIGHBOURS;
+        //neighbours_Screen();
+        //refresh_Counter = 15;
+        //screen = SCREEN_DRAW_READY;
+     // }
+      if (neighbour_Cursor == 1) {
+        // Broadcast
+        display = DISPLAY_MSG;
+        msg_Screen();
+        refresh_Counter = 15;
+        screen = SCREEN_DRAW_READY;
+      }
       break;
     }
 

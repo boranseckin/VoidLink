@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "network.h"
 
 // Screen state machine
 typedef enum {
@@ -33,6 +34,7 @@ extern uint8_t image[IMAGE_SIZE];
 extern uint8_t wakeup[IMAGE_SIZE];
 
 extern uint8_t message_Cursor;
+extern uint8_t neighbour_Cursor;
 extern uint8_t home_Cursor;
 extern uint8_t settings_Cursor;
 extern uint8_t set_Info_Cursor;
@@ -52,6 +54,9 @@ extern int new_Messages[16];
 // number of messages received
 extern uint32_t msg_Number;
 extern uint32_t new_Msg;
+
+// Bring in neighbour table
+extern neighbour_table_t neighbour_table;
 
 void setup_display();
 

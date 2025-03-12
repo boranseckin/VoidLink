@@ -18,6 +18,7 @@ uint8_t image[IMAGE_SIZE];
 uint8_t wakeup[IMAGE_SIZE];
 
 uint8_t message_Cursor = 0;
+uint8_t neighbour_Cursor = 0;
 uint8_t home_Cursor = 0;
 uint8_t settings_Cursor = 0;
 uint8_t set_Info_Cursor = 2;
@@ -35,6 +36,8 @@ int new_Messages[16];
 
 uint32_t msg_Number = 0;
 uint32_t new_Msg = 0;
+
+//extern neighbour_table_t neighbour_table;
 
 void setup_display() {
   DEV_Module_Init();
@@ -58,6 +61,7 @@ void wakeup_Screen() {
   sleep_ms(200);
 }
 
+// Broadcast msg screen
 void msg_Screen() {
   // Create a new display buffer
   Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
@@ -115,6 +119,8 @@ void received_Msgs() {
       printf("Writing Message\n");
       Paint_DrawString(20, 34 + i * 24, saved_Messages[i + ((received_Page - 1) * 3)], &Font16,
                        BLACK, WHITE);
+      //get the message history from the network.c file and print it here
+
       // sprintf(new_String, "From: %s",node_ID); //Get node ID from network code
       Paint_DrawString(20, 47 + i * 24, "From: 11.22.33", &Font12, BLACK,
                        WHITE); // replace with new_String
@@ -129,6 +135,8 @@ void received_Msgs() {
     }
     // Remove new message indicator if it was seen
     if (new_Messages[i + ((received_Page - 1) * 3)] == 1) {
+      Paint_DrawString(150, 34 + i * 24, "*NEW*", &Font16, BLACK, WHITE);
+      printf("New Message: %s\n",saved_Messages[i + ((received_Page - 1) * 3)]);
       new_Msg--;
       new_Messages[i + ((received_Page - 1) * 3)] = 0;
     }
@@ -156,10 +164,22 @@ void neighbours_Screen() {
   Paint_Clear(WHITE);
 
   // Draw message selection screen
-  Paint_DrawRectangle(15, 29, 170, 79, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
-  Paint_DrawString(20, 34, "Neighbours", &Font16, BLACK, WHITE);
-  Paint_DrawRectangle(15, 71, 170, 121, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
-  Paint_DrawString(20, 106, "Broadcast", &Font16, BLACK, WHITE);
+  if (neighbour_Cursor == 0) {
+    // select next screen
+    Paint_Clear(WHITE);
+    Paint_DrawRectangle(15, 29, 170, 69, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
+    Paint_DrawString(20, 34, "Neighbours", &Font16, WHITE, WHITE);
+    Paint_DrawRectangle(15, 71, 170, 111, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
+    Paint_DrawString(20, 106, "Broadcast", &Font16, BLACK, WHITE);
+  }
+  if (neighbour_Cursor == 1) {
+    // select next screen
+    Paint_Clear(WHITE);
+    Paint_DrawRectangle(15, 29, 170, 69, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
+    Paint_DrawString(20, 34, "Neighbours", &Font16, BLACK, WHITE);
+    Paint_DrawRectangle(15, 71, 170, 111, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
+    Paint_DrawString(20, 106, "Broadcast", &Font16, WHITE, WHITE);
+  }
 }
 
 void home_Screen() {
@@ -169,7 +189,6 @@ void home_Screen() {
   // Paint_SelectImage(image); //Do this for every other time
   //  Paint the whole frame white
   Paint_Clear(WHITE); // Just do for first time setup
-
   // SETTINGS SELECTED
   if (home_Cursor == 1) {
     // select next screen
@@ -177,26 +196,26 @@ void home_Screen() {
     Paint_DrawRectangle(50, 50, 80, 80, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
     Paint_DrawString(57, 57, "M", &Font20, BLACK, WHITE);
     Paint_DrawString(37, 85, "Messages", &Font12, WHITE, WHITE);
-    Paint_DrawRectangle(100, 50, 130, 80, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
-    Paint_DrawString(107, 57, "S", &Font20, WHITE, WHITE);
-    Paint_DrawString(86, 85, "Settings", &Font12, BLACK, WHITE);
     Paint_DrawRectangle(150, 50, 180, 80, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
     Paint_DrawString(157, 57, "N", &Font20, BLACK, WHITE);
     Paint_DrawString(132, 85, "Neighbours", &Font12, WHITE, WHITE);
+    Paint_DrawRectangle(100, 50, 130, 80, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
+    Paint_DrawString(107, 57, "S", &Font20, WHITE, WHITE);
+    Paint_DrawString(86, 85, "Settings", &Font12, BLACK, WHITE);
   }
   // MESSAGES SELECTED
   if (home_Cursor == 0) {
     // select next screen
     Paint_Clear(WHITE);
-    Paint_DrawRectangle(50, 50, 80, 80, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
-    Paint_DrawString(57, 57, "M", &Font20, WHITE, WHITE);
-    Paint_DrawString(37, 85, "Messages", &Font12, BLACK, WHITE);
     Paint_DrawRectangle(100, 50, 130, 80, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
     Paint_DrawString(107, 57, "S", &Font20, BLACK, WHITE);
     Paint_DrawString(83, 85, "Settings", &Font12, WHITE, WHITE);
     Paint_DrawRectangle(150, 50, 180, 80, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
     Paint_DrawString(157, 57, "N", &Font20, BLACK, WHITE);
     Paint_DrawString(132, 85, "Neighbours", &Font12, WHITE, WHITE);
+    Paint_DrawRectangle(50, 50, 80, 80, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
+    Paint_DrawString(57, 57, "M", &Font20, WHITE, WHITE);
+    Paint_DrawString(37, 85, "Messages", &Font12, BLACK, WHITE);
   }
   // NEIGHBOURS SELECTED
   if (home_Cursor == 2) {
@@ -222,11 +241,16 @@ void home_Screen() {
 
   // Draw version number
   char version[12];
+  char neighbour_Count[2];
   sprintf(version, "V/ink v%d.%d", VERSION_MAJOR, VERSION_MINOR);
   Paint_DrawString(0, 0, version, &Font12, BLACK, WHITE);
 
   // Draw nearby nodes, replace with network code
-  Paint_DrawString(110, 0, "2 Nearby Nodes", &Font12, BLACK, WHITE);
+  Paint_DrawString(125, 0, "Nearby Nodes", &Font12, BLACK, WHITE);
+  // convert neighbour_table.count to string
+  sprintf(neighbour_Count, "%d", neighbour_table.count);
+  Paint_DrawString(110, 0, neighbour_Count, &Font12, BLACK, WHITE);
+  //printf("Found Nodes: %d\n",neighbour_table.count);
 }
 
 void settings_Info() {

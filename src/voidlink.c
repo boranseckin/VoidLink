@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "class/cdc/cdc_device.h"
+#include "hardware/timer.h"
 #include "pico/multicore.h"
 #include "pico/time.h"
 #include "pico/util/queue.h"

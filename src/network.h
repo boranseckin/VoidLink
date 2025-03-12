@@ -87,6 +87,24 @@ typedef struct {
   uint8_t value;
 } info_t;
 
+// Neighbour table
+#define MAX_NEIGHBOURS 16
+
+// Neighbour information.
+typedef struct {
+  uid_t uid;
+  int8_t rssi;
+  uint8_t version_major;
+  uint8_t version_minor;
+  absolute_time_t last_seen;
+} neighbour_t;
+
+// Neighbour table.
+typedef struct {
+  neighbour_t neighbours[MAX_NEIGHBOURS];
+  uint8_t count;
+} neighbour_table_t;
+
 // Message structure.
 // On 32-bit architecture of pico, the struct needs to be aligned to 4-byte words.
 // The reserved data is for future expension.

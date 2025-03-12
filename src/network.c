@@ -23,6 +23,8 @@ queue_t rx_queue;
 static uid_t MY_UID = {.bytes = {0x00, 0x00, 0x00}};
 // Broadcast identifier.
 static const uid_t BROADCAST_UID = {.bytes = {0xFF, 0xFF, 0xFF}};
+// Set neighbour table to empty.
+neighbour_table_t neighbour_table = {.neighbours = {0}, .count = 0};
 
 static mid_t MID = 0;
 
@@ -189,7 +191,7 @@ message_t new_raw_message(uid_t dst, uint8_t *data[3]) {
   memcpy(msg.data, data, 3);
   return msg;
 }
-
+/*
 // Neighbour table
 #define MAX_NEIGHBOURS 16
 
@@ -207,8 +209,9 @@ typedef struct {
   neighbour_t neighbours[MAX_NEIGHBOURS];
   uint8_t count;
 } neighbour_table_t;
+ */
 
-static neighbour_table_t neighbour_table = {.neighbours = {0}, .count = 0};
+ //static neighbour_table_t neighbour_table = {.neighbours = {0}, .count = 0};
 
 // Update (or add) a neighbour to the table.
 void update_neighbour(uid_t uid, int8_t rssi, uint16_t version) {
