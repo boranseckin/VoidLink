@@ -1,3 +1,6 @@
 [submodule "lib/sx126x_driver"]
 	path = lib/sx126x_driver
 	url = https://github.com/Lora-net/sx126x_driver.git
+[submodule "hardware"]
+	path = hardware
+	url = git@github.com:Stefan1623/Capstone_Hardware.git
