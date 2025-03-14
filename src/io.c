@@ -6,6 +6,8 @@
 #include "io.h"
 #include "pico_config.h"
 #include "screen.h"
+#include "utils.h"
+#include "voidlink.h"
 
 void handle_button_callback(uint gpio, uint32_t events) {
   // if (screen != SCREEN_IDLE || (state != STATE_IDLE && state != STATE_RX))
@@ -226,23 +228,36 @@ void handle_button_callback(uint gpio, uint32_t events) {
       display = DISPLAY_SETTINGS;
       refresh_Counter = 15;
       screen = SCREEN_DRAW_READY;
-      if (set_Info_Cursor == 0) {
-        display_Timeout = 0;
+      if (settings_Cursor == 0){
+        if (set_Info_Cursor == 0) {
+          display_Timeout = 0;
+        }
+        if (set_Info_Cursor == 1) {
+          display_Timeout = 5000;
+        }
+        if (set_Info_Cursor == 2) {
+          display_Timeout = 10000;
+        }
+        if (set_Info_Cursor == 3) {
+          display_Timeout = 30000;
+        }
+        if (set_Info_Cursor == 4) {
+          display_Timeout = 60000;
+        }
+        if (set_Info_Cursor == 5) {
+          display_Timeout = 120000;
+        }
       }
-      if (set_Info_Cursor == 1) {
-        display_Timeout = 5000;
-      }
-      if (set_Info_Cursor == 2) {
-        display_Timeout = 10000;
-      }
-      if (set_Info_Cursor == 3) {
-        display_Timeout = 30000;
-      }
-      if (set_Info_Cursor == 4) {
-        display_Timeout = 60000;
-      }
-      if (set_Info_Cursor == 5) {
-        display_Timeout = 120000;
+      else if (settings_Cursor == 1){
+        if (set_Info_Cursor == 0) {
+          set_range(DEFAULT);
+        }
+        if (set_Info_Cursor == 1) {
+          set_range(FAST);
+        }
+        if (set_Info_Cursor > 1) {
+          set_range(LONGRANGE);
+        }
       }
       break;
 

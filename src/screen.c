@@ -302,12 +302,10 @@ void settings_Info() {
     Paint_DrawString(200, 55, "^", &Font12, BLACK, WHITE);
     Paint_DrawString(200, 73, "v", &Font12, BLACK, WHITE);
     if (set_Info_Cursor == 0) {
-      Paint_DrawString(170, 63, "Default", &Font12, BLACK, WHITE);
+      Paint_DrawString(170, 63, " Default", &Font12, BLACK, WHITE);
     } else if (set_Info_Cursor == 1) {
-      Paint_DrawString(170, 63, "Low Power", &Font12, BLACK, WHITE);
-    } else if (set_Info_Cursor == 2) {
-      Paint_DrawString(170, 63, "Standard", &Font12, BLACK, WHITE);
-    } else if (set_Info_Cursor == 3) {
+      Paint_DrawString(170, 63, "   Fast", &Font12, BLACK, WHITE);
+    } else if (set_Info_Cursor>1) {
       Paint_DrawString(170, 63, "Long Range", &Font12, BLACK, WHITE);
       set_Info_Cursor = 5;
     }
@@ -324,14 +322,14 @@ void settings_Screen() {
   Paint_DrawString(0, 5, "Settings:", &Font16, BLACK, WHITE);
 
   if (settings_Cursor == 0) {
-    Paint_DrawRectangle(5, 29, 155, 50, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
+    Paint_DrawRectangle(5, 29, 155, 55, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
     Paint_DrawString(10, 34, "Sleep Timeout", &Font16, WHITE, WHITE);
     Paint_DrawRectangle(5, 58, 155, 84, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
     Paint_DrawString(10, 63, "Mode", &Font16, BLACK, WHITE);
   }
 
   if (settings_Cursor == 1) {
-    Paint_DrawRectangle(5, 29, 155, 50, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
+    Paint_DrawRectangle(5, 29, 155, 55, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
     Paint_DrawString(10, 34, "Sleep Timeout", &Font16, BLACK, WHITE);
     Paint_DrawRectangle(5, 58, 155, 84, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
     Paint_DrawString(10, 63, "Mode", &Font16, WHITE, WHITE);
