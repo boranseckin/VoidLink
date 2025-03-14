@@ -9,6 +9,10 @@
 // Bump these versions according to the changes made.
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 3
+// Neighbour table
+#define MAX_NEIGHBOURS 16
+// Maximum number of messages to keep in history.
+#define MAX_MESSAGE_HISTORY 16
 
 // Maximum number of messages that can be buffered in the queue (both rx and tx).
 #define MESSAGE_QUEUE_SIZE 8
@@ -87,8 +91,7 @@ typedef struct {
   uint8_t value;
 } info_t;
 
-// Neighbour table
-#define MAX_NEIGHBOURS 16
+
 
 // Neighbour information.
 typedef struct {

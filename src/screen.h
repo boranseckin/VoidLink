@@ -58,6 +58,9 @@ extern uint32_t new_Msg;
 // Bring in neighbour table
 extern neighbour_table_t neighbour_table;
 
+extern message_t message_history[MAX_MESSAGE_HISTORY];
+extern uint8_t message_history_head;
+
 void setup_display();
 
 void wakeup_Screen();

@@ -191,27 +191,6 @@ message_t new_raw_message(uid_t dst, uint8_t *data[3]) {
   memcpy(msg.data, data, 3);
   return msg;
 }
-/*
-// Neighbour table
-#define MAX_NEIGHBOURS 16
-
-// Neighbour information.
-typedef struct {
-  uid_t uid;
-  int8_t rssi;
-  uint8_t version_major;
-  uint8_t version_minor;
-  absolute_time_t last_seen;
-} neighbour_t;
-
-// Neighbour table.
-typedef struct {
-  neighbour_t neighbours[MAX_NEIGHBOURS];
-  uint8_t count;
-} neighbour_table_t;
- */
-
- //static neighbour_table_t neighbour_table = {.neighbours = {0}, .count = 0};
 
 // Update (or add) a neighbour to the table.
 void update_neighbour(uid_t uid, int8_t rssi, uint16_t version) {
@@ -267,12 +246,12 @@ void print_neighbours() {
 }
 
 // Maximum number of messages to keep in history.
-#define MAX_MESSAGE_HISTORY 16
+//#define MAX_MESSAGE_HISTORY 16
 
 // Cyclic buffer of received messages.
-static message_t message_history[MAX_MESSAGE_HISTORY] = {0};
+message_t message_history[MAX_MESSAGE_HISTORY] = {0};
 // Index of the next message to be added.
-static uint8_t message_history_head = 0;
+uint8_t message_history_head = 0;
 
 // Check if a message is already received.
 // If not, add it to the history.

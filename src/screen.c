@@ -58,7 +58,7 @@ void wakeup_Screen() {
   Paint_DrawString(50, 50, "VoidLink", &Font24, BLACK, WHITE);
   EPD_2in13_V4_Init_Fast();
   EPD_2in13_V4_Display_Fast(wakeup);
-  sleep_ms(200);
+  busy_wait_ms(200);
 }
 
 // Broadcast msg screen
@@ -87,10 +87,23 @@ void received_msg_Details() {
   Paint_Clear(WHITE);
   // Draw message selection screen
   Paint_DrawString(0, 0, "Message Details:", &Font16, BLACK, WHITE);
-  Paint_DrawString(0, 25, saved_Messages[received_Cursor + ((received_Page - 1) * 3)], &Font16,
-                   BLACK, WHITE);
-  // sprintf(new_String, "From: %s",node_ID); //Get node ID from network code
-  Paint_DrawString(0, 75, "From: 11.22.33", &Font12, BLACK, WHITE); // replace with new_String
+  message_t *msg = &message_history[received_Cursor + ((received_Page - 1) * 3)];
+  char *src = uid_to_string(msg->src);
+  printf("- [%d]: %s %s %d\r\n", received_Cursor + ((received_Page - 1) * 3), src, MTYPE_STR[msg->mtype], msg->id);
+
+  //Paint_DrawString(0, 25, saved_Messages[received_Cursor + ((received_Page - 1) * 3)], &Font16,
+                   //BLACK, WHITE); // OLD STATIC TEST
+  Paint_DrawString(0, 25, msg->data, &Font16,BLACK, WHITE);
+
+  char from[20];
+  sprintf(from, "From: %s",src); //Get node ID from network code
+  Paint_DrawString(0, 75, from, &Font12, BLACK, WHITE);
+  //Paint_DrawString(0, 75, "From: 11.22.33", &Font12, BLACK, WHITE); // OLD STATIC TEST
+
+  char type[20];
+  sprintf(type, "Msg Type: %s",MTYPE_STR[msg->mtype]); //Get node ID from network code
+  Paint_DrawString(0, 55, type, &Font12, BLACK, WHITE);
+
   // sprintf(new_String, "%s mins ago",time_Stamp); //Get time_Stamp from network code
   Paint_DrawString(170, 75, "3 mins ago", &Font12, BLACK, WHITE); // replace with new_String
   if (msg_Action_Cursor == 0) {
@@ -117,6 +130,10 @@ void received_Msgs() {
     // Display messages, sender and time received
     if (i + ((received_Page - 1) * 3) < msg_Number) {
       printf("Writing Message\n");
+      message_t *msg = &message_history[i + ((received_Page - 1) * 3)];
+      char *src = uid_to_string(msg->src);
+      printf("- [%d]: %s %s %d\r\n", i + ((received_Page - 1) * 3), src, MTYPE_STR[msg->mtype], msg->id);
+      
       Paint_DrawString(20, 34 + i * 24, saved_Messages[i + ((received_Page - 1) * 3)], &Font16,
                        BLACK, WHITE);
       //get the message history from the network.c file and print it here
@@ -137,8 +154,10 @@ void received_Msgs() {
     if (new_Messages[i + ((received_Page - 1) * 3)] == 1) {
       Paint_DrawString(150, 34 + i * 24, "*NEW*", &Font16, BLACK, WHITE);
       printf("New Message: %s\n",saved_Messages[i + ((received_Page - 1) * 3)]);
-      new_Msg--;
-      new_Messages[i + ((received_Page - 1) * 3)] = 0;
+      if (received_Cursor == i) {
+        new_Msg--;
+        new_Messages[i + ((received_Page - 1) * 3)] = 0;
+      }
     }
     for (int i = 0; i < 3; i++) {
       Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
@@ -166,7 +185,6 @@ void neighbours_Screen() {
   // Draw message selection screen
   if (neighbour_Cursor == 0) {
     // select next screen
-    Paint_Clear(WHITE);
     Paint_DrawRectangle(15, 29, 170, 69, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
     Paint_DrawString(20, 34, "Neighbours", &Font16, WHITE, WHITE);
     Paint_DrawRectangle(15, 71, 170, 111, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
@@ -174,7 +192,6 @@ void neighbours_Screen() {
   }
   if (neighbour_Cursor == 1) {
     // select next screen
-    Paint_Clear(WHITE);
     Paint_DrawRectangle(15, 29, 170, 69, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
     Paint_DrawString(20, 34, "Neighbours", &Font16, BLACK, WHITE);
     Paint_DrawRectangle(15, 71, 170, 111, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
@@ -371,7 +388,8 @@ void screen_draw_loop() {
       }
       // printf("Updating Image\n");
       sleep_ms(100);
-      // Set alarm to sleep display after 7 seconds of inactivity
+      //busy_wait_ms(100);
+      // Set alarm to sleep display after x seconds of inactivity
       set_flag_and_reset_alarm();
       multicore_fifo_push_blocking_inline(0);
     }

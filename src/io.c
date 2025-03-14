@@ -100,8 +100,9 @@ void handle_button_callback(uint gpio, uint32_t events) {
       }
 
       if (home_Cursor == 2) { // Go to neighbours screen
-        display = DISPLAY_NEIGHBOURS;
         neighbours_Screen();
+        display = DISPLAY_NEIGHBOURS;
+        neighbour_Cursor = 0;
         refresh_Counter = 15;
         screen = SCREEN_DRAW_READY;
       }
@@ -144,7 +145,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
       break;
 
     case DISPLAY_SETTINGS:
-      // printf("On Settings Screen."); //For testing purposes
+      //printf("On Settings Screen."); //For testing purposes
       //  Add selection drawings for settings screen
       temp_Cursor = set_Info_Cursor;
       display = DISPLAY_SETTINGS_INFO;
@@ -180,7 +181,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
       break;
 
     case DISPLAY_NEIGHBOURS:
-      // printf("On Neighbours Screen."); //For testing purposes
+      printf("On Neighbours Screen."); //For testing purposes
       //  Add selection drawings for neighbours screen
       //if (neighbour_Cursor == 0) {
         // Go to neighbours table screen
@@ -258,8 +259,6 @@ void handle_button_callback(uint gpio, uint32_t events) {
       break;
 
     case DISPLAY_NEIGHBOURS:
-      // printf("On Neighbours Screen."); //For testing purposes
-      //  Add selection drawings for neighbours screen
       display = DISPLAY_HOME;
       home_Screen();
       refresh_Counter = 15;
