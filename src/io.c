@@ -78,6 +78,72 @@ void handle_button_callback(uint gpio, uint32_t events) {
       break;
     }
 
+  } else if (gpio == PIN_BUTTON_BACKCYCLE) { // add switch cases for each state
+    switch (display) {
+    case DISPLAY_HOME:
+      printf("On Home Screen.\n"); // For testing purposes
+      // Add selection drawings for home screen
+      home_Cursor = (home_Cursor - 1 + 3) % 3;
+      home_Screen();
+      printf("new msgs: %d\n", new_Msg); // For testing purposes
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_RXMSG:
+      printf("On Received Messages Screen.\n"); // For testing purposes
+      // Reset cursor if moving to new page
+      if (received_Cursor == 0 && received_Page >= 1) {
+        received_Page--;
+        received_Cursor = 2;
+      } else {
+        received_Cursor = (received_Cursor - 1 + (msg_Number - (received_Page - 1) * 3)) % (msg_Number - (received_Page - 1) * 3);
+      }
+      // Display cursor
+      received_Msgs();
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_RXMSG_DETAILS:
+      msg_Action_Cursor = (msg_Action_Cursor - 1 + 2) % 2;
+      received_msg_Details();
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_MSG:
+      // printf("On Message Screen.\n"); // For testing purposes
+      // message_Cursor = (message_Cursor + 1) % 3;
+      // for (int i = 0; i < 3; i++) {
+      //   Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
+      // }
+      // Paint_DrawString(0, 34 + message_Cursor * 24, ">", &Font16, BLACK, WHITE);
+      // screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_SETTINGS:
+      printf("On Settings Screen.\n"); // For testing purposes
+      // Add selection drawings for settings screen
+      settings_Cursor = (settings_Cursor - 1 + 2) % 2;
+      settings_Screen();
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_SETTINGS_INFO:
+      printf("On Settings Info Screen.\n"); // For testing purposes
+      // Add selection drawings for settings screen
+      set_Info_Cursor = (set_Info_Cursor - 1 + 6) % 6;
+      settings_Info();
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_NEIGHBOURS:
+      printf("On Neighbours Screen.\n"); // For testing purposes
+      // Add selection drawings for neighbours screen
+      neighbour_Cursor = (neighbour_Cursor - 1 + 2) % 2;
+      neighbours_Screen();
+      screen = SCREEN_DRAW_READY;
+      break;
+    }
+
   } else if (gpio == PIN_BUTTON_OK) {
 
     switch (display) {
