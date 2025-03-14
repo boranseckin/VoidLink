@@ -23,7 +23,7 @@ if (EXISTS ${picoVscode})
     include(${picoVscode})
 endif()
 # ====================================================================================
-set(PICO_BOARD pico CACHE STRING "Board type")
+set(PICO_BOARD pico2 CACHE STRING "Board type")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
@@ -39,7 +39,8 @@ pico_set_program_name(voidlink "voidlink")
 pico_set_program_version(voidlink "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(voidlink 0)
+target_compile_definitions(voidlink PRIVATE "ENABLE_SERIAL_USB")
+pico_enable_stdio_uart(voidlink 1)
 pico_enable_stdio_usb(voidlink 1)
 
 FILE(GLOB_RECURSE VOIDLINK_SRC_FILES ${CMAKE_CURRENT_LIST_DIR}/src/*.c)

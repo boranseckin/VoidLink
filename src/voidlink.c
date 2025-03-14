@@ -1,11 +1,16 @@
 #include <stdio.h>
+#include <string.h>
 
-#include "class/cdc/cdc_device.h"
 #include "hardware/timer.h"
 #include "pico/multicore.h"
 #include "pico/time.h"
 #include "pico/util/queue.h"
+
+#ifdef ENABLE_SERIAL_USB
+#include "class/cdc/cdc_device.h"
+#include "pico/stdio_usb.h"
 #include "tusb.h"
+#endif
 
 #include "pico_config.h"
 #include "sx126x.h"
@@ -170,6 +175,7 @@ void handle_irq_callback(uint gpio, uint32_t events) {
   }
 }
 
+#ifdef ENABLE_SERIAL_USB
 // USB uart RX callback.
 // printf does not work during this callback.
 void tud_cdc_rx_cb(uint8_t itf) {
@@ -202,15 +208,18 @@ void tud_cdc_rx_cb(uint8_t itf) {
     }
   }
 }
+#endif
 
 void setup_io() {
   // Initialize the uart for printing from the pico.
   stdio_init_all();
 
+#ifdef ENABLE_SERIAL_USB
   // Wait until the usb is ready to transmit.
   while (!tud_cdc_connected()) {
     sleep_ms(100);
   }
+#endif
 
   // Initialize the SPI interface of the pico (pins defined in the src/pico_config.h).
   spi_t spi = pico_spi_init(SPI_PORT, PIN_MISO, PIN_MOSI, PIN_SCLK, PIN_NSS);
@@ -470,8 +479,10 @@ int main() {
     // Check the ack list for timeouts.
     check_ack_list();
 
+#ifdef ENABLE_SERIAL_USB
     // USB uart RX callback job
     tud_task();
+#endif
 
     // Process incoming console message
     if (console == CONSOLE_READY) {
