@@ -64,6 +64,7 @@ The default pinout diagram between sx126x, eink display, buttons and pico.
 
 | Button | uC      |
 | ------ | ------- |
+|Previous| GP6 (8) |
 | Next   | GP5 (7) |
 | Ok     | GP4 (6) |
 | Back   | GP3 (5) |
