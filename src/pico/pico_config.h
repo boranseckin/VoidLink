@@ -13,7 +13,7 @@
 #define PIN_DIO1 22
 
 #define PIN_BUTTON_NEXT 5
-#define PIN_BUTTON_BACKCYCLE 6
+#define PIN_BUTTON_PREVIOUS 6
 #define PIN_BUTTON_OK 4
 #define PIN_BUTTON_BACK 3
 
