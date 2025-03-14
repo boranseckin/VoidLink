@@ -1,6 +1,8 @@
 #ifndef PICO_CONFIG_H
 #define PICO_CONFIG_H
 
+#define UART_PORT uart0
+
 #define SPI_PORT spi0
 #define PIN_MISO PICO_DEFAULT_SPI_RX_PIN
 #define PIN_MOSI PICO_DEFAULT_SPI_TX_PIN

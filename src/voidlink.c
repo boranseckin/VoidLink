@@ -1,16 +1,17 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "hardware/irq.h"
+#include "hardware/regs/intctrl.h"
 #include "hardware/timer.h"
+#include "hardware/uart.h"
 #include "pico/multicore.h"
 #include "pico/time.h"
 #include "pico/util/queue.h"
 
-#ifdef ENABLE_SERIAL_USB
 #include "class/cdc/cdc_device.h"
 #include "pico/stdio_usb.h"
 #include "tusb.h"
-#endif
 
 #include "pico_config.h"
 #include "sx126x.h"
@@ -175,8 +176,7 @@ void handle_irq_callback(uint gpio, uint32_t events) {
   }
 }
 
-#ifdef ENABLE_SERIAL_USB
-// USB uart RX callback.
+// USB serial RX callback.
 // printf does not work during this callback.
 void tud_cdc_rx_cb(uint8_t itf) {
   if (tud_cdc_available()) {
@@ -208,18 +208,41 @@ void tud_cdc_rx_cb(uint8_t itf) {
     }
   }
 }
-#endif
+
+// UART serial RX callback
+// Reads the character into the same buffer as USB.
+void uart_rx_cb() {
+  // static uint chars_rxed = 0;
+  while (uart_is_readable(UART_PORT)) {
+    uint8_t ch = uart_getc(UART_PORT);
+
+    console_buffer[console_buffer_offset++] = ch;
+
+    uart_putc(UART_PORT, ch);
+
+    if (ch == '\r') {
+      console_buffer[console_buffer_offset - 1] = '\0';
+      console_buffer_offset = 0;
+      console = CONSOLE_READY;
+
+      uart_putc(UART_PORT, '\n');
+    }
+  }
+}
 
 void setup_io() {
   // Initialize the uart for printing from the pico.
   stdio_init_all();
 
-#ifdef ENABLE_SERIAL_USB
+  uart_set_fifo_enabled(UART_PORT, false);
+  irq_set_exclusive_handler(UART_PORT == uart0 ? UART0_IRQ : UART1_IRQ, uart_rx_cb);
+  irq_set_enabled(UART0_IRQ, true);
+  uart_set_irqs_enabled(UART_PORT, true, false);
+
   // Wait until the usb is ready to transmit.
-  while (!tud_cdc_connected()) {
-    sleep_ms(100);
-  }
-#endif
+  // while (!tud_cdc_connected()) {
+  //   sleep_ms(100);
+  // }
 
   // Initialize the SPI interface of the pico (pins defined in the src/pico_config.h).
   spi_t spi = pico_spi_init(SPI_PORT, PIN_MISO, PIN_MOSI, PIN_SCLK, PIN_NSS);
@@ -479,10 +502,8 @@ int main() {
     // Check the ack list for timeouts.
     check_ack_list();
 
-#ifdef ENABLE_SERIAL_USB
     // USB uart RX callback job
     tud_task();
-#endif
 
     // Process incoming console message
     if (console == CONSOLE_READY) {

@@ -39,7 +39,6 @@ pico_set_program_name(voidlink "voidlink")
 pico_set_program_version(voidlink "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-target_compile_definitions(voidlink PRIVATE "ENABLE_SERIAL_USB")
 pico_enable_stdio_uart(voidlink 1)
 pico_enable_stdio_usb(voidlink 1)
 
