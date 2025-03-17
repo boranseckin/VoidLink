@@ -71,6 +71,28 @@ void handle_button_callback(uint gpio, uint32_t events) {
       screen = SCREEN_DRAW_READY;
       break;
 
+    case DISPLAY_NEIGHBOURS_TABLE:
+      printf("On Neighbours Table.\n"); //For testing purposes
+      if (neighbour_Table_Cursor == 2 && (neighbour_table.count - (neighbour_Table_Cursor - 1) * 3) > 3) {
+        neighbour_received_Page++;
+        neighbour_Table_Cursor = 0;
+      } else {
+        if (neighbour_table.count == 0){
+          neighbour_Table_Cursor = 0;
+        } else {
+        neighbour_Table_Cursor = (neighbour_Table_Cursor + 1) % (neighbour_table.count - (neighbour_Table_Cursor - 1) * 3);
+        }
+      }
+      neighbours_Table();
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_NEIGHBOURS_ACTION:
+      neighbour_Action_Cursor = (neighbour_Action_Cursor + 1) % 2;
+      neighbours_Action();
+      screen = SCREEN_DRAW_READY;
+      break;
+
     case DISPLAY_NEIGHBOURS:
       printf("On Neighbours Screen.\n"); // For testing purposes
       // Add selection drawings for neighbours screen
@@ -134,6 +156,28 @@ void handle_button_callback(uint gpio, uint32_t events) {
       // Add selection drawings for settings screen
       set_Info_Cursor = (set_Info_Cursor - 1 + 6) % 6;
       settings_Info();
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_NEIGHBOURS_TABLE:
+      printf("On Neighbours Table.\n"); //For testing purposes
+      if (neighbour_Table_Cursor == 0 && neighbour_received_Page >= 1) {
+        neighbour_received_Page--;
+        neighbour_Table_Cursor = 2;
+      } else {
+        if (neighbour_table.count == 0){
+          neighbour_Table_Cursor = 0;
+        } else {
+        neighbour_Table_Cursor = (neighbour_Table_Cursor - 1 + (neighbour_table.count - (neighbour_received_Page - 1) * 3)) % (neighbour_table.count - (neighbour_received_Page - 1) * 3);
+        }
+      }
+      neighbours_Table();
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_NEIGHBOURS_ACTION:
+      neighbour_Action_Cursor = (neighbour_Action_Cursor - 1 + 2) % 2;
+      neighbours_Action();
       screen = SCREEN_DRAW_READY;
       break;
 
@@ -204,7 +248,6 @@ void handle_button_callback(uint gpio, uint32_t events) {
         refresh_Counter = 15;
         screen = SCREEN_DRAW_READY;
       }
-
       break;
 
     case DISPLAY_MSG:
@@ -261,16 +304,45 @@ void handle_button_callback(uint gpio, uint32_t events) {
       }
       break;
 
+    case DISPLAY_NEIGHBOURS_TABLE:
+      printf("On Neighbours Table.\n"); //For testing purposes
+      if (neighbour_table.count > 0){
+        neighbours_Action();
+        display = DISPLAY_NEIGHBOURS_ACTION;
+        neighbour_Action_Cursor = 0;
+        refresh_Counter = 15;
+        screen = SCREEN_DRAW_READY;
+      }
+      break;
+
+    case DISPLAY_NEIGHBOURS_ACTION:
+      if (neighbour_Action_Cursor == 0) {
+        // Send a text msg
+        printf("text.\n");
+      } else if (msg_Action_Cursor == 1) {
+        // Send Ping message
+        printf("ping.\n");
+        try_transmit(new_ping_message(neighbour_table.neighbours[neighbour_Table_Cursor + ((neighbour_received_Page - 1) * 3)].uid));
+      } else if (msg_Action_Cursor == 2) {
+        // Send Request message
+        printf("request.\n");
+      } else if (msg_Action_Cursor == 3) {
+        // Remove neighbour
+        printf("remove.\n");
+      }
+      break;
+
     case DISPLAY_NEIGHBOURS:
       printf("On Neighbours Screen."); //For testing purposes
       //  Add selection drawings for neighbours screen
-      //if (neighbour_Cursor == 0) {
+      if (neighbour_Cursor == 0) {
         // Go to neighbours table screen
-        //display = DISPLAY_NEIGHBOURS;
-        //neighbours_Screen();
-        //refresh_Counter = 15;
-        //screen = SCREEN_DRAW_READY;
-     // }
+        neighbours_Table();
+        display = DISPLAY_NEIGHBOURS_TABLE;
+        refresh_Counter = 15;
+        screen = SCREEN_DRAW_READY;
+      }
+     // Go to msg screen
       if (neighbour_Cursor == 1) {
         // Broadcast
         display = DISPLAY_MSG;
@@ -335,6 +407,20 @@ void handle_button_callback(uint gpio, uint32_t events) {
       set_Info_Cursor = temp_Cursor;
       settings_Screen();
       display = DISPLAY_SETTINGS;
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_NEIGHBOURS_TABLE:
+      display = DISPLAY_NEIGHBOURS;
+      neighbours_Screen();
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_NEIGHBOURS_ACTION:
+      display = DISPLAY_NEIGHBOURS_TABLE;
+      neighbours_Table();
       refresh_Counter = 15;
       screen = SCREEN_DRAW_READY;
       break;

@@ -20,6 +20,9 @@ typedef enum {
   DISPLAY_MSG,
   DISPLAY_RXMSG,
   DISPLAY_RXMSG_DETAILS,
+  DISPLAY_NEIGHBOURS_TABLE,
+  DISPLAY_NEIGHBOURS_ACTION,
+  DISPLAY_NEIGHBOURS_REQUEST,
   DISPLAY_NEIGHBOURS,
   DISPLAY_SETTINGS,
   DISPLAY_SETTINGS_INFO,
@@ -35,6 +38,9 @@ extern uint8_t wakeup[IMAGE_SIZE];
 
 extern uint8_t message_Cursor;
 extern uint8_t neighbour_Cursor;
+extern uint8_t neighbour_Table_Cursor;
+extern uint8_t neighbour_Action_Cursor;
+extern uint8_t neighbour_Request_Cursor;
 extern uint8_t home_Cursor;
 extern uint8_t settings_Cursor;
 extern uint8_t set_Info_Cursor;
@@ -42,6 +48,7 @@ extern uint8_t msg_Action_Cursor;
 extern uint8_t temp_Cursor;
 extern uint8_t received_Cursor;
 extern uint8_t received_Page;
+extern uint8_t neighbour_received_Page;
 extern uint8_t refresh_Counter;
 extern uint32_t display_Timeout;
 extern volatile bool five_Seconds;
@@ -67,6 +74,9 @@ void wakeup_Screen();
 void msg_Screen();
 void received_msg_Details();
 void received_Msgs();
+void neighbours_Action();
+void neighbours_Table();
+void neighbours_Request();
 void neighbours_Screen();
 void home_Screen();
 void settings_Info();

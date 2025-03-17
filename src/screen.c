@@ -19,6 +19,9 @@ uint8_t wakeup[IMAGE_SIZE];
 
 uint8_t message_Cursor = 0;
 uint8_t neighbour_Cursor = 0;
+uint8_t neighbour_Table_Cursor = 0;
+uint8_t neighbour_Action_Cursor = 0;
+uint8_t neighbour_Request_Cursor = 0;
 uint8_t home_Cursor = 0;
 uint8_t settings_Cursor = 0;
 uint8_t set_Info_Cursor = 2;
@@ -26,6 +29,7 @@ uint8_t msg_Action_Cursor = 0;
 uint8_t temp_Cursor = 0;
 uint8_t received_Cursor = 0;
 uint8_t received_Page = 1;
+uint8_t neighbour_received_Page = 1;
 uint8_t refresh_Counter = 0;
 uint32_t display_Timeout = 10000;
 volatile bool five_Seconds = true;
@@ -176,6 +180,102 @@ void received_Msgs() {
   }
 }
 
+void neighbours_Action() {
+  printf("ACTION.\n");
+  // Create a new display buffer
+  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  // Paint the whole frame white
+  Paint_Clear(WHITE);
+  // Draw message selection screen
+  Paint_DrawString(0, 0, "Neighbour Details:", &Font16, BLACK, WHITE);
+  neighbour_t *neighbour_Node = &neighbour_table.neighbours[neighbour_Table_Cursor + ((neighbour_received_Page - 1) * 3)];
+  char *src = uid_to_string(neighbour_Node->uid);
+  //Paint_DrawString(0, 25, src, &Font16,BLACK, WHITE);
+  char from[20];
+  sprintf(from, "Neighbour: %s",src);
+  Paint_DrawString(0, 25, from, &Font16, BLACK, WHITE);
+
+  char seen[20];
+  sprintf(seen, "Last Seen: %s",neighbour_Node->last_seen);
+  Paint_DrawString(0, 55, seen, &Font12, BLACK, WHITE);
+
+  char version[20];
+  sprintf(version, "Version: %d.%d",neighbour_Node->version_major,neighbour_Node->version_minor);
+  Paint_DrawString(165, 55, version, &Font12, BLACK, WHITE);
+
+  char rssi[20];
+  sprintf(rssi, "RSSI: %d",neighbour_Node->rssi);
+  Paint_DrawString(0, 75, rssi, &Font12, BLACK, WHITE);
+
+  if (neighbour_Action_Cursor == 0) {
+    Paint_DrawString(5, 100, "Text", &Font16, WHITE, BLACK);
+    Paint_DrawString(55, 100, "Ping", &Font16, BLACK, WHITE);
+    Paint_DrawString(105, 100, "Request", &Font16, BLACK, WHITE);
+    Paint_DrawString(155, 100, "Remove", &Font16, BLACK, WHITE);
+  } else if (neighbour_Action_Cursor == 1) {
+    Paint_DrawString(5, 100, "Text", &Font16, BLACK, WHITE);
+    Paint_DrawString(55, 100, "Ping", &Font16, WHITE, BLACK);
+    Paint_DrawString(105, 100, "Request", &Font16, BLACK, WHITE);
+    Paint_DrawString(155, 100, "Remove", &Font16, BLACK, WHITE);
+  } else if (neighbour_Action_Cursor == 2) {
+    Paint_DrawString(5, 100, "Text", &Font16, BLACK, WHITE);
+    Paint_DrawString(55, 100, "Ping", &Font16, BLACK, WHITE);
+    Paint_DrawString(105, 100, "Request", &Font16, WHITE, BLACK);
+    Paint_DrawString(155, 100, "Remove", &Font16, BLACK, WHITE);
+  } else if (neighbour_Action_Cursor == 3) {
+    Paint_DrawString(5, 100, "Text", &Font16, BLACK, WHITE);
+    Paint_DrawString(55, 100, "Ping", &Font16, BLACK, WHITE);
+    Paint_DrawString(105, 100, "Request", &Font16, BLACK, WHITE);
+    Paint_DrawString(155, 100, "Remove", &Font16, WHITE, BLACK);
+  }
+}
+
+void neighbours_Table() {
+  // Create a new display buffer
+  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  // Paint the whole frame white
+  Paint_Clear(WHITE);
+  // Draw message selection screen
+  Paint_DrawString(0, 5, "Neighbours Table:", &Font16, BLACK, WHITE);
+  printf("neighbour table count: %d\n", neighbour_table.count);
+  for (int i = 0; i < 3; i++) {
+    // Display messages, sender and time received
+    if (i + ((neighbour_received_Page - 1) * 3) < neighbour_table.count) {
+      neighbour_t *neighbour_Node = &neighbour_table.neighbours[i + ((neighbour_received_Page - 1) * 3)];
+      char *src = uid_to_string(neighbour_Node->uid);
+      //printf("- [%d]: %s %s %d\r\n", i + ((received_Page - 1) * 3), src, MTYPE_STR[msg->mtype], msg->id);
+      
+      Paint_DrawString(20, 34 + i * 24, src, &Font16,
+                       BLACK, WHITE);
+    }
+    // Clear rest of screen if there aren't enough messages to fill it
+    else {
+      printf("Clearing Message\n");
+      Paint_DrawRectangle(0, 34 + i * 24, 170, 47 + i * 24, WHITE, DOT_PIXEL_2X2, DRAW_FILL_FULL);
+    }
+    for (int i = 0; i < 3; i++) {
+      Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
+    }
+    if (neighbour_table.count > 0){
+      Paint_DrawString(0, 34 + neighbour_Table_Cursor * 24, ">", &Font16, BLACK, WHITE);
+    }
+  }
+  if (neighbour_table.count == 0) {
+    Paint_DrawString(0, 34, "No Neighbours Found.", &Font16, BLACK, WHITE);
+  }
+  // Display page indicators
+  if (neighbour_received_Page > 1) {
+    Paint_DrawString(100, 30, "^", &Font12, BLACK, WHITE);
+  }
+  if (neighbour_received_Page < ((float)msg_Number / 3)) {
+    Paint_DrawString(100, 110, "v", &Font12, BLACK, WHITE);
+  }
+}
+
+void neighbours_Request(){
+  printf("Requesting Neighbours/n");
+}
+
 void neighbours_Screen() {
   // Create a new display buffer
   Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
@@ -184,18 +284,18 @@ void neighbours_Screen() {
 
   // Draw message selection screen
   if (neighbour_Cursor == 0) {
-    // select next screen
-    Paint_DrawRectangle(15, 29, 170, 69, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
-    Paint_DrawString(20, 34, "Neighbours", &Font16, WHITE, WHITE);
-    Paint_DrawRectangle(15, 71, 170, 111, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
-    Paint_DrawString(20, 106, "Broadcast", &Font16, BLACK, WHITE);
+    // Neighbours table selected
+    Paint_DrawRectangle(15, 29, 210, 65, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
+    Paint_DrawString(27, 39, "View Neighbours", &Font16, WHITE, WHITE);
+    Paint_DrawRectangle(15, 71, 210, 107, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
+    Paint_DrawString(22, 81, "Broadcast To All", &Font16, BLACK, WHITE);
   }
   if (neighbour_Cursor == 1) {
-    // select next screen
-    Paint_DrawRectangle(15, 29, 170, 69, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
-    Paint_DrawString(20, 34, "Neighbours", &Font16, BLACK, WHITE);
-    Paint_DrawRectangle(15, 71, 170, 111, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
-    Paint_DrawString(20, 106, "Broadcast", &Font16, WHITE, WHITE);
+    // msg screen selected
+    Paint_DrawRectangle(15, 29, 210, 65, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
+    Paint_DrawString(27, 39, "View Neighbours", &Font16, BLACK, WHITE);
+    Paint_DrawRectangle(15, 71, 210, 107, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
+    Paint_DrawString(22, 81, "Broadcast To All", &Font16, WHITE, WHITE);
   }
 }
 
