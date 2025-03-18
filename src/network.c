@@ -243,7 +243,7 @@ void print_neighbours() {
 }
 
 // Cyclic buffer of received messages.
-message_t message_history[MAX_MESSAGE_HISTORY] = {0};
+message_history_t message_history[MAX_MESSAGE_HISTORY] = {0};
 // Index of the next message to be added.
 uint8_t message_history_head = 0;
 
@@ -251,13 +251,14 @@ uint8_t message_history_head = 0;
 // If not, add it to the history.
 bool check_message_history(message_t msg) {
   for (int i = 0; i < MAX_MESSAGE_HISTORY; i++) {
-    if (compare_messages(&message_history[i], &msg)) {
+    if (compare_messages(&message_history[i].message, &msg)) {
       debug("message %d from %s already received\n", msg.id, uid_to_string(msg.src));
       return true;
     }
   }
 
-  message_history[message_history_head] = msg;
+  message_history[message_history_head].message = msg;
+  message_history[message_history_head].time = get_absolute_time();
   message_history_head = (message_history_head + 1) % MAX_MESSAGE_HISTORY;
   debug("message %d from %s added to history\n", msg.id, uid_to_string(msg.src));
 
@@ -267,12 +268,13 @@ bool check_message_history(message_t msg) {
 // Print the message history.
 void print_message_history() {
   for (int i = 0; i < MAX_MESSAGE_HISTORY; i++) {
-    if (message_history[i].src.bytes[0] == 0) {
+    if (message_history[i].message.src.bytes[0] == 0) {
       continue;
     }
-    message_t *msg = &message_history[i];
+    message_t *msg = &message_history[i].message;
     char *src = uid_to_string(msg->src);
-    printf("- [%d]: %s %s %d\r\n", i, src, MTYPE_STR[msg->mtype], msg->id);
+    printf("- [%d]: %s %s %d (%ds)\r\n", i, src, MTYPE_STR[msg->mtype], msg->id,
+           to_ms_since_boot(message_history[i].time) / 1000);
   }
 }
 

@@ -127,8 +127,13 @@ typedef struct {
   uint8_t data[3];
 } message_t;
 
+typedef struct {
+  message_t message;
+  absolute_time_t time;
+} message_history_t;
+
 // Cyclic buffer of received messages.
-extern message_t message_history[MAX_MESSAGE_HISTORY];
+extern message_history_t message_history[MAX_MESSAGE_HISTORY];
 // Index of the next message to be added.
 extern uint8_t message_history_head;
 

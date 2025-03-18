@@ -91,7 +91,7 @@ void received_msg_Details() {
   Paint_Clear(WHITE);
   // Draw message selection screen
   Paint_DrawString(0, 0, "Message Details:", &Font16, BLACK, WHITE);
-  message_t *msg = &message_history[received_Cursor + ((received_Page - 1) * 3)];
+  message_t *msg = &message_history[received_Cursor + ((received_Page - 1) * 3)].message;
   char *src = uid_to_string(msg->src);
   printf("- [%d]: %s %s %d\r\n", received_Cursor + ((received_Page - 1) * 3), src, MTYPE_STR[msg->mtype], msg->id);
 
@@ -136,7 +136,7 @@ void received_Msgs() {
     // Display messages, sender and time received
     if (i + ((received_Page - 1) * 3) < msg_Number) {
       printf("Writing Message\n");
-      message_t *msg = &message_history[i + ((received_Page - 1) * 3)];
+      message_t *msg = &message_history[i + ((received_Page - 1) * 3)].message;
       char *src = uid_to_string(msg->src);
       printf("- [%d]: %s %s %d\r\n", i + ((received_Page - 1) * 3), src, MTYPE_STR[msg->mtype], msg->id);
       
