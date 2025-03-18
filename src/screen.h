@@ -62,9 +62,6 @@ extern int new_Messages[16];
 extern uint32_t msg_Number;
 extern uint32_t new_Msg;
 
-// Bring in neighbour table
-extern neighbour_table_t neighbour_table;
-
 extern message_t message_history[MAX_MESSAGE_HISTORY];
 extern uint8_t message_history_head;
 

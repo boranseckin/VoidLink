@@ -88,7 +88,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
       break;
 
     case DISPLAY_NEIGHBOURS_ACTION:
-      neighbour_Action_Cursor = (neighbour_Action_Cursor + 1) % 2;
+      neighbour_Action_Cursor = (neighbour_Action_Cursor + 1) % 4;
       neighbours_Action();
       screen = SCREEN_DRAW_READY;
       break;
@@ -176,7 +176,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
       break;
 
     case DISPLAY_NEIGHBOURS_ACTION:
-      neighbour_Action_Cursor = (neighbour_Action_Cursor - 1 + 2) % 2;
+      neighbour_Action_Cursor = (neighbour_Action_Cursor - 1 + 2) % 4;
       neighbours_Action();
       screen = SCREEN_DRAW_READY;
       break;
@@ -305,8 +305,8 @@ void handle_button_callback(uint gpio, uint32_t events) {
       break;
 
     case DISPLAY_NEIGHBOURS_TABLE:
-      printf("On Neighbours Table.\n"); //For testing purposes
       if (neighbour_table.count > 0){
+        printf("On Neighbours Table.\n"); //For testing purposes
         neighbours_Action();
         display = DISPLAY_NEIGHBOURS_ACTION;
         neighbour_Action_Cursor = 0;
@@ -319,14 +319,14 @@ void handle_button_callback(uint gpio, uint32_t events) {
       if (neighbour_Action_Cursor == 0) {
         // Send a text msg
         printf("text.\n");
-      } else if (msg_Action_Cursor == 1) {
+      } else if (neighbour_Action_Cursor == 1) {
         // Send Ping message
         printf("ping.\n");
         try_transmit(new_ping_message(neighbour_table.neighbours[neighbour_Table_Cursor + ((neighbour_received_Page - 1) * 3)].uid));
-      } else if (msg_Action_Cursor == 2) {
+      } else if (neighbour_Action_Cursor == 2) {
         // Send Request message
         printf("request.\n");
-      } else if (msg_Action_Cursor == 3) {
+      } else if (neighbour_Action_Cursor == 3) {
         // Remove neighbour
         printf("remove.\n");
       }

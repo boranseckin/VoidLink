@@ -21,6 +21,8 @@ extern queue_t tx_queue;
 // Incoming message queue.
 extern queue_t rx_queue;
 
+
+
 // 16 predefined text messages.
 typedef enum __attribute__((__packed__)) {
   TEXT_OK = 0,
@@ -108,6 +110,7 @@ typedef struct {
   uint8_t count;
 } neighbour_table_t;
 
+extern neighbour_table_t neighbour_table;
 // Message structure.
 // On 32-bit architecture of pico, the struct needs to be aligned to 4-byte words.
 // The reserved data is for future expension.

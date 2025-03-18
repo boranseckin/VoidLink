@@ -97,7 +97,9 @@ void received_msg_Details() {
 
   //Paint_DrawString(0, 25, saved_Messages[received_Cursor + ((received_Page - 1) * 3)], &Font16,
                    //BLACK, WHITE); // OLD STATIC TEST
-  Paint_DrawString(0, 25, msg->data, &Font16,BLACK, WHITE);
+  char data[255];
+  sprintf(data, "Data: %d", msg->data);
+  Paint_DrawString(0, 25, data, &Font16,BLACK, WHITE);
 
   char from[20];
   sprintf(from, "From: %s",src); //Get node ID from network code
@@ -183,29 +185,28 @@ void received_Msgs() {
 void neighbours_Action() {
   printf("ACTION.\n");
   // Create a new display buffer
-  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  //Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  Paint_SelectImage(image);
   // Paint the whole frame white
   Paint_Clear(WHITE);
   // Draw message selection screen
   Paint_DrawString(0, 0, "Neighbour Details:", &Font16, BLACK, WHITE);
-  neighbour_t *neighbour_Node = &neighbour_table.neighbours[neighbour_Table_Cursor + ((neighbour_received_Page - 1) * 3)];
-  char *src = uid_to_string(neighbour_Node->uid);
+  printf("%d\n",neighbour_Table_Cursor + ((neighbour_received_Page - 1) * 3));
+  neighbour_t *neighbour_Node_Action = &neighbour_table.neighbours[neighbour_Table_Cursor + ((neighbour_received_Page - 1) * 3)];
+  char *src = uid_to_string(neighbour_Node_Action->uid);
   //Paint_DrawString(0, 25, src, &Font16,BLACK, WHITE);
-  char from[20];
-  sprintf(from, "Neighbour: %s",src);
-  Paint_DrawString(0, 25, from, &Font16, BLACK, WHITE);
+  char buffer[64];
+  sprintf(buffer, "Neighbour: %s",src);
+  Paint_DrawString(0, 25, buffer, &Font16, BLACK, WHITE);
 
-  char seen[20];
-  sprintf(seen, "Last Seen: %s",neighbour_Node->last_seen);
-  Paint_DrawString(0, 55, seen, &Font12, BLACK, WHITE);
+  sprintf(buffer, "Last Seen: %ds",absolute_time_diff_us(neighbour_Node_Action->last_seen,get_absolute_time())/1000/1000);
+  Paint_DrawString(0, 55, buffer, &Font12, BLACK, WHITE);
 
-  char version[20];
-  sprintf(version, "Version: %d.%d",neighbour_Node->version_major,neighbour_Node->version_minor);
-  Paint_DrawString(165, 55, version, &Font12, BLACK, WHITE);
+  sprintf(buffer, "Version: %d.%d",neighbour_Node_Action->version_major,neighbour_Node_Action->version_minor);
+  Paint_DrawString(165, 55, buffer, &Font12, BLACK, WHITE);
 
-  char rssi[20];
-  sprintf(rssi, "RSSI: %d",neighbour_Node->rssi);
-  Paint_DrawString(0, 75, rssi, &Font12, BLACK, WHITE);
+  sprintf(buffer, "RSSI: %d",neighbour_Node_Action->rssi);
+  Paint_DrawString(0, 75, buffer, &Font12, BLACK, WHITE);
 
   if (neighbour_Action_Cursor == 0) {
     Paint_DrawString(5, 100, "Text", &Font16, WHITE, BLACK);
@@ -267,7 +268,7 @@ void neighbours_Table() {
   if (neighbour_received_Page > 1) {
     Paint_DrawString(100, 30, "^", &Font12, BLACK, WHITE);
   }
-  if (neighbour_received_Page < ((float)msg_Number / 3)) {
+  if (neighbour_received_Page < ((float)neighbour_table.count / 3)) {
     Paint_DrawString(100, 110, "v", &Font12, BLACK, WHITE);
   }
 }
