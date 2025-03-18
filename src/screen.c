@@ -98,7 +98,7 @@ void received_msg_Details() {
   //Paint_DrawString(0, 25, saved_Messages[received_Cursor + ((received_Page - 1) * 3)], &Font16,
                    //BLACK, WHITE); // OLD STATIC TEST
   char data[255];
-  sprintf(data, "Data: %d", msg->data);
+  sprintf(data, "Data: %s", TEXT_MESSAGE_STR[msg->data[0]]);
   Paint_DrawString(0, 25, data, &Font16,BLACK, WHITE);
 
   char from[20];
@@ -109,9 +109,11 @@ void received_msg_Details() {
   char type[20];
   sprintf(type, "Msg Type: %s",MTYPE_STR[msg->mtype]); //Get node ID from network code
   Paint_DrawString(0, 55, type, &Font12, BLACK, WHITE);
+  char buff[64];
+  int time = absolute_time_diff_us(message_history[received_Cursor + ((received_Page - 1) * 3)].time,get_absolute_time())/1000/1000;
+  sprintf(buff, "%ds ago",time); //Get time_Stamp from network code
+  Paint_DrawString(170, 75, buff, &Font12, BLACK, WHITE); // replace with new_String
 
-  // sprintf(new_String, "%s mins ago",time_Stamp); //Get time_Stamp from network code
-  Paint_DrawString(170, 75, "3 mins ago", &Font12, BLACK, WHITE); // replace with new_String
   if (msg_Action_Cursor == 0) {
     Paint_DrawString(20, 100, "Reply", &Font16, WHITE, BLACK);
     Paint_DrawString(150, 100, "Delete", &Font16, BLACK, WHITE);
@@ -131,25 +133,29 @@ void received_Msgs() {
 
   // Draw message selection screen
   Paint_DrawString(0, 10, "Received Messages:", &Font16, BLACK, WHITE);
-  printf("msg number: %d\n", msg_Number);
+  printf("msg number: %d\n", message_history_count);
   for (int i = 0; i < 3; i++) {
     // Display messages, sender and time received
-    if (i + ((received_Page - 1) * 3) < msg_Number) {
+    if (i + ((received_Page - 1) * 3) < message_history_count) {
       printf("Writing Message\n");
       message_t *msg = &message_history[i + ((received_Page - 1) * 3)].message;
       char *src = uid_to_string(msg->src);
       printf("- [%d]: %s %s %d\r\n", i + ((received_Page - 1) * 3), src, MTYPE_STR[msg->mtype], msg->id);
       
-      Paint_DrawString(20, 34 + i * 24, saved_Messages[i + ((received_Page - 1) * 3)], &Font16,
+      //Paint_DrawString(20, 34 + i * 24, saved_Messages[i + ((received_Page - 1) * 3)], &Font16,
+                       //BLACK, WHITE);
+      Paint_DrawString(20, 34 + i * 24, MTYPE_STR[msg->mtype], &Font16,
                        BLACK, WHITE);
       //get the message history from the network.c file and print it here
+      char buff [64];
+      sprintf(buff, "From: %s",src); //Get node ID from network code
+      Paint_DrawString(20, 47 + i * 24, buff, &Font12, BLACK,
+                       WHITE); // replace with new_String
 
-      // sprintf(new_String, "From: %s",node_ID); //Get node ID from network code
-      Paint_DrawString(20, 47 + i * 24, "From: 11.22.33", &Font12, BLACK,
-                       WHITE); // replace with new_String
-      // sprintf(new_String, "%s mins ago",time_Stamp); //Get time_Stamp from network code
-      Paint_DrawString(130, 47 + i * 24, "3 mins ago", &Font12, BLACK,
-                       WHITE); // replace with new_String
+      int time = absolute_time_diff_us(message_history[i + ((received_Page - 1) * 3)].time,get_absolute_time())/1000/1000;
+      sprintf(buff, "%ds ago",time); //Get time_Stamp from network code
+      Paint_DrawString(130, 47 + i * 24, buff, &Font12, BLACK,
+                       WHITE);
     }
     // Clear rest of screen if there aren't enough messages to fill it
     else {
@@ -170,14 +176,14 @@ void received_Msgs() {
     }
     Paint_DrawString(0, 34 + received_Cursor * 24, ">", &Font16, BLACK, WHITE);
   }
-  if (msg_Number == 0) {
+  if (message_history_count == 0) {
     Paint_DrawString(0, 34, "No messages received.", &Font16, BLACK, WHITE);
   }
   // Display page indicators
   if (received_Page > 1) {
     Paint_DrawString(100, 30, "^", &Font12, BLACK, WHITE);
   }
-  if (received_Page < ((float)msg_Number / 3)) {
+  if (received_Page < ((float)message_history_count / 3)) {
     Paint_DrawString(100, 110, "v", &Font12, BLACK, WHITE);
   }
 }
@@ -198,11 +204,24 @@ void neighbours_Action() {
   char buffer[64];
   sprintf(buffer, "Neighbour: %s",src);
   Paint_DrawString(0, 25, buffer, &Font16, BLACK, WHITE);
-
-  sprintf(buffer, "Last Seen: %ds",absolute_time_diff_us(neighbour_Node_Action->last_seen,get_absolute_time())/1000/1000);
+ // Update last seen and change units based on time
+  int time_diff = absolute_time_diff_us(neighbour_Node_Action->last_seen,get_absolute_time())/1000/1000;
+  if (time_diff > 60) {
+    time_diff = time_diff / 60;
+    sprintf(buffer, "Last Seen: %dm",time_diff);
+  } else if (time_diff > 60 * 60) {
+    time_diff = (float)time_diff / 60 / 60;
+    sprintf(buffer, "Last Seen: %dh",time_diff);
+  }else {
+    sprintf(buffer, "Last Seen: %ds",time_diff);
+  }
   Paint_DrawString(0, 55, buffer, &Font12, BLACK, WHITE);
 
-  sprintf(buffer, "Version: %d.%d",neighbour_Node_Action->version_major,neighbour_Node_Action->version_minor);
+  if (neighbour_Node_Action->version_major == 0 && neighbour_Node_Action->version_minor == 0){
+    sprintf(buffer, "Version: Unk");
+  } else {
+    sprintf(buffer, "Version: %d.%d",neighbour_Node_Action->version_major,neighbour_Node_Action->version_minor);
+  }
   Paint_DrawString(165, 55, buffer, &Font12, BLACK, WHITE);
 
   sprintf(buffer, "RSSI: %d",neighbour_Node_Action->rssi);

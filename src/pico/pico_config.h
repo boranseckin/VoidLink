@@ -17,12 +17,12 @@
 #define PIN_BUSY 21
 #define PIN_DIO1 22
 
-#define PIN_BUTTON_A 4
+#define PIN_BUTTON_A 7
 #define PIN_BUTTON_B 5
 #define PIN_BUTTON_C 6
-#define PIN_BUTTON_D 3
-#define PIN_BUTTON_E 7
-#define PIN_BUTTON_F 9
+#define PIN_BUTTON_D 9
+#define PIN_BUTTON_E 4
+#define PIN_BUTTON_F 3
 
 #define PIN_BUTTON_NEXT PIN_BUTTON_B
 #define PIN_BUTTON_PREV PIN_BUTTON_C
