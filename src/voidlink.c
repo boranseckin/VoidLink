@@ -267,9 +267,9 @@ void setup_io() {
   pico_gpio_set_interrupt(PIN_BUTTON_BACK, GPIO_IRQ_EDGE_FALL, &handle_irq_callback);
 
   // Light up the onboard LED to signify setup is done.
-  gpio_init(PICO_DEFAULT_LED_PIN);
-  gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
-  gpio_put(PICO_DEFAULT_LED_PIN, 1);
+  gpio_init(PIN_STATUS_LED);
+  gpio_set_dir(PIN_STATUS_LED, GPIO_OUT);
+  gpio_put(PIN_STATUS_LED, 1);
 
   debug("io setup done\n");
 }

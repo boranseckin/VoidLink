@@ -102,7 +102,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
       break;
     }
 
-  } else if (gpio == PIN_BUTTON_PREVIOUS) { // add switch cases for each state
+  } else if (gpio == PIN_BUTTON_PREV) { // add switch cases for each state
     switch (display) {
     case DISPLAY_HOME:
       printf("On Home Screen.\n"); // For testing purposes

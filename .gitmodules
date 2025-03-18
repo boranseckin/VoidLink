@@ -3,4 +3,4 @@
 	url = https://github.com/Lora-net/sx126x_driver.git
 [submodule "hardware"]
 	path = hardware
-	url = git@github.com:Stefan1623/Capstone_Hardware.git
+	url = https://github.com/Stefan1623/Capstone_Hardware.git

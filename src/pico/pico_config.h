@@ -1,6 +1,11 @@
 #ifndef PICO_CONFIG_H
 #define PICO_CONFIG_H
 
+#define PIN_CONFIG_v0
+// #define PIN_CONFIG_v1_1
+// #define PIN_CONFIG_v1_2
+
+#ifdef PIN_CONFIG_v0
 #define UART_PORT uart0
 
 #define SPI_PORT spi0
@@ -12,9 +17,73 @@
 #define PIN_BUSY 21
 #define PIN_DIO1 22
 
-#define PIN_BUTTON_NEXT 5
-#define PIN_BUTTON_PREVIOUS 6
-#define PIN_BUTTON_OK 4
-#define PIN_BUTTON_BACK 3
+#define PIN_BUTTON_A 4
+#define PIN_BUTTON_B 5
+#define PIN_BUTTON_C 6
+#define PIN_BUTTON_D 3
+#define PIN_BUTTON_E 7
+#define PIN_BUTTON_F 9
+
+#define PIN_BUTTON_NEXT PIN_BUTTON_B
+#define PIN_BUTTON_PREV PIN_BUTTON_C
+#define PIN_BUTTON_OK PIN_BUTTON_E
+#define PIN_BUTTON_BACK PIN_BUTTON_F
+
+#define PIN_STATUS_LED PICO_DEFAULT_LED_PIN
+#endif
+
+#ifdef PIN_CONFIG_v1_1
+#define UART_PORT uart0
+
+#define SPI_PORT spi0
+#define PIN_MISO 20
+#define PIN_MOSI PICO_DEFAULT_SPI_TX_PIN
+#define PIN_SCLK PICO_DEFAULT_SPI_SCK_PIN
+#define PIN_NSS 17
+#define PIN_RESET 23
+#define PIN_BUSY 21
+#define PIN_DIO1 22
+
+#define PIN_BUTTON_A 7
+#define PIN_BUTTON_B 5
+#define PIN_BUTTON_C 6
+#define PIN_BUTTON_D 9
+#define PIN_BUTTON_E 4
+#define PIN_BUTTON_F 3
+
+#define PIN_BUTTON_NEXT PIN_BUTTON_B
+#define PIN_BUTTON_PREV PIN_BUTTON_C
+#define PIN_BUTTON_OK PIN_BUTTON_E
+#define PIN_BUTTON_BACK PIN_BUTTON_F
+
+#define PIN_STATUS_LED 24
+#endif
+
+#ifdef PIN_CONFIG_v1_2
+#define UART_PORT uart0
+
+#define SPI_PORT spi0
+#define PIN_MISO 20
+#define PIN_MOSI PICO_DEFAULT_SPI_TX_PIN
+#define PIN_SCLK PICO_DEFAULT_SPI_SCK_PIN
+#define PIN_NSS 17
+#define PIN_RESET 23
+#define PIN_BUSY 21
+#define PIN_DIO1 22
+
+#define PIN_BUTTON_A 7
+#define PIN_BUTTON_B 5
+#define PIN_BUTTON_C 6
+#define PIN_BUTTON_D 9
+#define PIN_BUTTON_E 4
+#define PIN_BUTTON_F 3
+
+#define PIN_BUTTON_NEXT PIN_BUTTON_B
+#define PIN_BUTTON_PREV PIN_BUTTON_C
+#define PIN_BUTTON_OK PIN_BUTTON_E
+#define PIN_BUTTON_BACK PIN_BUTTON_F
+
+#define PIN_STATUS_LED 24
+#endif
 
 #endif // PICO_CONFIG_H
