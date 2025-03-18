@@ -136,6 +136,7 @@ typedef struct {
 extern message_history_t message_history[MAX_MESSAGE_HISTORY];
 // Index of the next message to be added.
 extern uint8_t message_history_head;
+extern uint8_t message_history_count;
 
 // Messages with timeout and retry values for ack.
 // Entry is invalid if `timeout` == 0.

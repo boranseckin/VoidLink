@@ -246,6 +246,7 @@ void print_neighbours() {
 message_history_t message_history[MAX_MESSAGE_HISTORY] = {0};
 // Index of the next message to be added.
 uint8_t message_history_head = 0;
+uint8_t message_history_count = 0;
 
 // Check if a message is already received.
 // If not, add it to the history.
@@ -260,6 +261,7 @@ bool check_message_history(message_t msg) {
   message_history[message_history_head].message = msg;
   message_history[message_history_head].time = get_absolute_time();
   message_history_head = (message_history_head + 1) % MAX_MESSAGE_HISTORY;
+  message_history_count++;
   debug("message %d from %s added to history\n", msg.id, uid_to_string(msg.src));
 
   return false;
