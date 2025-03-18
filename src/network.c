@@ -72,9 +72,6 @@ bool is_my_uid(uid_t uid) { return memcmp(&uid, &MY_UID, sizeof(uid_t)) == 0; }
 // Check if an uid is the broadcast id.
 bool is_broadcast(uid_t uid) { return memcmp(&uid, &BROADCAST_UID, sizeof(uid_t)) == 0; }
 
-// Maximum value for the message id.
-#define MAX_MID (1 << (sizeof(mid_t) * 8))
-
 // Returns the next message id.
 // Each call increments the id by one, wrapping around at MAX_MID.
 mid_t get_mid() {
@@ -245,9 +242,6 @@ void print_neighbours() {
   }
 }
 
-// Maximum number of messages to keep in history.
-//#define MAX_MESSAGE_HISTORY 16
-
 // Cyclic buffer of received messages.
 message_t message_history[MAX_MESSAGE_HISTORY] = {0};
 // Index of the next message to be added.
@@ -281,20 +275,6 @@ void print_message_history() {
     printf("- [%d]: %s %s %d\r\n", i, src, MTYPE_STR[msg->mtype], msg->id);
   }
 }
-
-// Messages with timeout and retry values for ack.
-// Entry is invalid if `timeout` == 0.
-typedef struct {
-  message_t message;
-  absolute_time_t timeout;
-  uint8_t retries;
-} ack_t;
-
-// Timeout value for non-acked messages.
-#define ACK_TIMEOUT 1000 * 30 // 30 seconds
-
-// Number of tries before we give up on the message.
-#define ACK_MAX_RETRIES 5
 
 // Ack list to keep track of messages that need to be acked.
 // Each message is indexed by its mid.

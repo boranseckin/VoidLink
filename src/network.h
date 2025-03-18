@@ -13,15 +13,16 @@
 #define MAX_NEIGHBOURS 16
 // Maximum number of messages to keep in history.
 #define MAX_MESSAGE_HISTORY 16
-
+// Timeout value for non-acked messages.
+#define ACK_TIMEOUT 1000 * 30 // 30 seconds
+// Number of tries before we give up on the message.
+#define ACK_MAX_RETRIES 5
 // Maximum number of messages that can be buffered in the queue (both rx and tx).
 #define MESSAGE_QUEUE_SIZE 8
 // Outgoing message queue.
 extern queue_t tx_queue;
 // Incoming message queue.
 extern queue_t rx_queue;
-
-
 
 // 16 predefined text messages.
 typedef enum __attribute__((__packed__)) {
@@ -59,6 +60,9 @@ bool is_broadcast(uid_t uid);
 // Message ID.
 typedef uint8_t mid_t;
 
+// Maximum value for the message id.
+#define MAX_MID (1 << (sizeof(mid_t) * 8))
+
 // Message types.
 typedef enum __attribute__((__packed__)) {
   MTYPE_ACK = 0,
@@ -93,8 +97,6 @@ typedef struct {
   uint8_t value;
 } info_t;
 
-
-
 // Neighbour information.
 typedef struct {
   uid_t uid;
@@ -111,6 +113,7 @@ typedef struct {
 } neighbour_table_t;
 
 extern neighbour_table_t neighbour_table;
+
 // Message structure.
 // On 32-bit architecture of pico, the struct needs to be aligned to 4-byte words.
 // The reserved data is for future expension.
@@ -123,6 +126,23 @@ typedef struct {
   uint8_t reserved[4];
   uint8_t data[3];
 } message_t;
+
+// Cyclic buffer of received messages.
+extern message_t message_history[MAX_MESSAGE_HISTORY];
+// Index of the next message to be added.
+extern uint8_t message_history_head;
+
+// Messages with timeout and retry values for ack.
+// Entry is invalid if `timeout` == 0.
+typedef struct {
+  message_t message;
+  absolute_time_t timeout;
+  uint8_t retries;
+} ack_t;
+
+// Ack list to keep track of messages that need to be acked.
+// Each message is indexed by its mid.
+extern ack_t ack_list[MAX_MID];
 
 void setup_network();
 

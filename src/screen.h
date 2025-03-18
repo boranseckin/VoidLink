@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+
 #include "network.h"
 
 // Screen state machine
@@ -61,9 +62,6 @@ extern int new_Messages[16];
 // number of messages received
 extern uint32_t msg_Number;
 extern uint32_t new_Msg;
-
-extern message_t message_history[MAX_MESSAGE_HISTORY];
-extern uint8_t message_history_head;
 
 void setup_display();
 
