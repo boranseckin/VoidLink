@@ -1,3 +1,4 @@
+#include <pico/rand.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -47,17 +48,21 @@ static console_t console = CONSOLE_IDLE;
 
 static sx126x_hal_context_t context;
 static sx126x_mod_params_lora_t mod_params;
+static mod_params_t mod_params_local;
 
 void set_range(mod_params_t param) {
   switch (param) {
   case DEFAULT:
     mod_params = MOD_PARAMS_DEFAULT;
+    mod_params_local = DEFAULT;
     break;
   case FAST:
     mod_params = MOD_PARAMS_FAST;
+    mod_params_local = FAST;
     break;
   case LONGRANGE:
     mod_params = MOD_PARAMS_LONGRANGE;
+    mod_params_local = LONGRANGE;
     break;
   }
 
@@ -396,6 +401,20 @@ void transmit_bytes(uint8_t *bytes, uint8_t length) {
 void transmit_string(char *string) { transmit_bytes((uint8_t *)string, strlen(string)); }
 
 void transmit_packet(message_t *packet) {
+  // Wait for a random amount of time.
+  uint32_t timeout = get_rand_32();
+
+  if (mod_params_local == FAST) {
+    timeout %= 300;
+  } else if (mod_params_local == LONGRANGE) {
+    timeout %= 1000;
+  } else {
+    timeout %= 500;
+  }
+
+  debug("sleeping for %d ms\n", timeout);
+  sleep_ms(timeout);
+
   debug("->");
   for (int i = 0; i < sizeof(message_t); i++) {
     debug(" %02x", ((uint8_t *)packet)[i]);
