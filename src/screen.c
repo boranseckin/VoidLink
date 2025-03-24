@@ -18,6 +18,7 @@ uint8_t image[IMAGE_SIZE];
 uint8_t wakeup[IMAGE_SIZE];
 
 uint8_t message_Cursor = 0;
+uint8_t send_to_Cursor = 0;
 uint8_t neighbour_Cursor = 0;
 uint8_t neighbour_Table_Cursor = 0;
 uint8_t neighbour_Action_Cursor = 0;
@@ -29,12 +30,16 @@ uint8_t msg_Action_Cursor = 0;
 uint8_t temp_Cursor = 0;
 uint8_t received_Cursor = 0;
 uint8_t received_Page = 1;
+uint8_t msg_received_Page = 1;
 uint8_t neighbour_received_Page = 1;
 uint8_t refresh_Counter = 0;
 uint32_t display_Timeout = 10000;
 volatile bool five_Seconds = true;
+uint8_t msg_Type = 0;
 
-char saved_Messages[16][255 + 4];
+//char send_Message[16][255 + 4];
+// add strings to send_Message
+char send_Message[MAX_MSG_SEND][255 + 4] = {"Ok", "No", "Over", "Out", "Go Ahead", "Stand By", "Come In", "Copy", "Repeat", "Break Break", "SOS", "Good Reception", "Bad Reception", "Stay Put", "Move"};
 char test[7];
 int new_Messages[16];
 
@@ -72,7 +77,37 @@ void send_To_Screen(){
   Paint_Clear(WHITE);
 
   // Draw message selection screen
-  Paint_DrawString(0, 5, "Who do you want to send to?", &Font16, BLACK, WHITE);
+  if (msg_Type == 0){ //msg_Type = 0 is text message
+    Paint_DrawString(0, 35, "Who do you want to send to?", &Font16, BLACK, WHITE);
+    Paint_DrawString(20, 5, "Sending Message:", &Font16, BLACK, WHITE);
+    Paint_DrawString(55, 5, send_Message[send_to_Cursor + ((msg_received_Page - 1) * 3)], &Font16,
+                         BLACK, WHITE);
+  } else if (msg_Type == 1){ //msg_Type = 1 is request message
+    Paint_DrawString(0, 35, "Who do you want to request from?", &Font16, BLACK, WHITE);
+    Paint_DrawString(20, 5, "Requesting Info:", &Font16, BLACK, WHITE);
+    if (neighbour_Request_Cursor == 0) {
+      Paint_DrawString(55, 5, "Version", &Font16,
+                         BLACK, WHITE);
+    } else if (neighbour_Request_Cursor == 1) {
+      Paint_DrawString(55, 5, "Uptime", &Font16,
+                         BLACK, WHITE);
+    }
+  } else if (msg_Type == 2){ //msg_Type = 2 is ping message
+    Paint_DrawString(0, 35, "Who do you want to ping?", &Font16, BLACK, WHITE);
+    Paint_DrawString(20, 5, "Sending ping.", &Font16, BLACK, WHITE);
+  }
+  Paint_DrawString(150, 70, ">", &Font16, BLACK, WHITE);
+  Paint_DrawString(10, 70, "<", &Font16, BLACK, WHITE);
+  char *src;
+
+  if (send_to_Cursor == 0) {
+    Paint_DrawString(35, 70, "Broadcast to all", &Font16, WHITE, BLACK);
+  } else {
+    neighbour_t *neighbour_Node = &neighbour_table.neighbours[send_to_Cursor - 1];
+    src = uid_to_string(neighbour_Node->uid);
+    Paint_DrawString(35, 70, src, &Font16, BLACK, WHITE);
+  }
+  Paint_DrawString(70, 100, "Press the OK/Confirm button to transmit.", &Font16, BLACK, WHITE);
 }
 
 void msg_Screen() {
@@ -82,15 +117,29 @@ void msg_Screen() {
   Paint_Clear(WHITE);
 
   // Draw message selection screen
-  Paint_DrawString(0, 10, "Select a message:", &Font16, BLACK, WHITE);
-  Paint_DrawString(20, 34, "1. Hello", &Font16, BLACK, WHITE);
-  Paint_DrawString(20, 58, "2. Yes", &Font16, BLACK, WHITE);
-  Paint_DrawString(20, 82, "3. No", &Font16, BLACK, WHITE);
-  // Paint_DrawString(20, 106, "4. On my way!", &Font16, BLACK, WHITE);
-
-  // Display cursor
-  Paint_DrawString(0, 34, ">", &Font16, BLACK, WHITE);
-  message_Cursor = 0;
+  for (int i = 0; i < 3; i++) {
+    // Display messages, sender and time received
+    if (i + ((msg_received_Page - 1) * 3) < MAX_MSG_SEND) {
+      Paint_DrawString(20, 34 + i * 24, send_Message[i + ((msg_received_Page - 1) * 3)], &Font16,
+                       BLACK, WHITE);
+    }
+    // Clear rest of screen if there aren't enough messages to fill it
+    else {
+      printf("Clearing Message\n");
+      Paint_DrawRectangle(0, 34 + i * 24, 170, 47 + i * 24, WHITE, DOT_PIXEL_2X2, DRAW_FILL_FULL);
+    }
+    for (int i = 0; i < 3; i++) {
+      Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
+    }
+    Paint_DrawString(0, 34 + message_Cursor * 24, ">", &Font16, BLACK, WHITE);
+  }
+  // Display page indicators
+  if (msg_received_Page > 1) {
+    Paint_DrawString(100, 30, "^", &Font12, BLACK, WHITE);
+  }
+  if (msg_received_Page < ((float)MAX_MSG_SEND / 3)) {
+    Paint_DrawString(100, 110, "v", &Font12, BLACK, WHITE);
+  }
 }
 
 void received_msg_Details() {
@@ -182,7 +231,7 @@ void received_Msgs() {
     // Remove new message indicator if it was seen
     if (new_Messages[i + ((received_Page - 1) * 3)] == 1) {
       Paint_DrawString(150, 34 + i * 24, "*NEW*", &Font16, BLACK, WHITE);
-      printf("New Message: %s\n",saved_Messages[i + ((received_Page - 1) * 3)]);
+      //printf("New Message: %s\n",saved_Messages[i + ((received_Page - 1) * 3)]);
       if (received_Cursor == i) {
         new_Msg--;
         new_Messages[i + ((received_Page - 1) * 3)] = 0;
@@ -311,14 +360,14 @@ void neighbours_Request(){
 
   // Draw message selection screen
   if (neighbour_Request_Cursor == 0) {
-    // Neighbours table selected
+    // Version selected
     Paint_DrawRectangle(15, 29, 210, 65, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
     Paint_DrawString(27, 39, "Version", &Font16, WHITE, WHITE);
     Paint_DrawRectangle(15, 71, 210, 107, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
     Paint_DrawString(22, 81, "Uptime", &Font16, BLACK, WHITE);
   }
   if (neighbour_Request_Cursor == 1) {
-    // msg screen selected
+    // Uptime selected
     Paint_DrawRectangle(15, 29, 210, 65, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
     Paint_DrawString(27, 39, "Version", &Font16, BLACK, WHITE);
     Paint_DrawRectangle(15, 71, 210, 107, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);

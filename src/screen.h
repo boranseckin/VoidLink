@@ -39,6 +39,7 @@ extern uint8_t image[IMAGE_SIZE];
 extern uint8_t wakeup[IMAGE_SIZE];
 
 extern uint8_t message_Cursor;
+extern uint8_t send_to_Cursor;
 extern uint8_t neighbour_Cursor;
 extern uint8_t neighbour_Table_Cursor;
 extern uint8_t neighbour_Action_Cursor;
@@ -50,13 +51,16 @@ extern uint8_t msg_Action_Cursor;
 extern uint8_t temp_Cursor;
 extern uint8_t received_Cursor;
 extern uint8_t received_Page;
+extern uint8_t msg_received_Page;
 extern uint8_t neighbour_received_Page;
 extern uint8_t refresh_Counter;
 extern uint32_t display_Timeout;
 extern volatile bool five_Seconds;
+extern uint8_t msg_Type;
 
 // character array to store received messages
-extern char saved_Messages[16][255 + 4];
+#define MAX_MSG_SEND 15
+extern char send_Message[MAX_MSG_SEND][255 + 4];
 extern char test[7];
 extern int new_Messages[16];
 

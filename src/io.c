@@ -45,14 +45,24 @@ void handle_button_callback(uint gpio, uint32_t events) {
       screen = SCREEN_DRAW_READY;
       break;
 
+    case DISPLAY_SEND_TO:
+      send_to_Cursor = (send_to_Cursor + 1) % (neighbour_table.count+1);
+      send_To_Screen();
+      screen = SCREEN_DRAW_READY;
+      break;
+
     case DISPLAY_MSG:
       // printf("On Message Screen.\n"); // For testing purposes
       // message_Cursor = (message_Cursor + 1) % 3;
-      // for (int i = 0; i < 3; i++) {
-      //   Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
-      // }
-      // Paint_DrawString(0, 34 + message_Cursor * 24, ">", &Font16, BLACK, WHITE);
-      // screen = SCREEN_DRAW_READY;
+      if (message_Cursor == 2 && (MAX_MSG_SEND - (msg_received_Page - 1) * 3) > 3) {
+        msg_received_Page++;
+        message_Cursor = 0;
+      } else {
+        message_Cursor = (message_Cursor + 1) % (MAX_MSG_SEND - (msg_received_Page - 1) * 3);
+      }
+      // Display cursor
+      msg_Screen();
+      screen = SCREEN_DRAW_READY;
       break;
 
     case DISPLAY_SETTINGS:
@@ -139,14 +149,25 @@ void handle_button_callback(uint gpio, uint32_t events) {
       screen = SCREEN_DRAW_READY;
       break;
 
+    case DISPLAY_SEND_TO:
+      send_to_Cursor = (send_to_Cursor - 1 + (neighbour_table.count+1)) % (neighbour_table.count+1);
+      send_To_Screen();
+      screen = SCREEN_DRAW_READY;
+      break;
+
     case DISPLAY_MSG:
       // printf("On Message Screen.\n"); // For testing purposes
       // message_Cursor = (message_Cursor + 1) % 3;
-      // for (int i = 0; i < 3; i++) {
-      //   Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
-      // }
-      // Paint_DrawString(0, 34 + message_Cursor * 24, ">", &Font16, BLACK, WHITE);
-      // screen = SCREEN_DRAW_READY;
+      // Reset cursor if moving to new page
+      if (message_Cursor == 0 && msg_received_Page >= 1) {
+        msg_received_Page--;
+        message_Cursor = 2;
+      } else {
+        message_Cursor = (message_Cursor - 1 + (MAX_MSG_SEND - (msg_received_Page - 1) * 3)) % (MAX_MSG_SEND - (msg_received_Page - 1) * 3);
+      }
+      // Display cursor
+      msg_Screen();
+      screen = SCREEN_DRAW_READY;
       break;
 
     case DISPLAY_SETTINGS:
@@ -246,7 +267,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
       if (msg_Action_Cursor == 0) {
         // Reply to message
         display = DISPLAY_MSG;
-        msg_Screen();
+        msg_Screen(); // Needs to change, needs to get to node actions screen.
         refresh_Counter = 15;
         screen = SCREEN_DRAW_READY;
       }
@@ -262,9 +283,40 @@ void handle_button_callback(uint gpio, uint32_t events) {
       }
       break;
 
+    case DISPLAY_SEND_TO:
+      uid_t dst;
+      info_key_t key;
+      text_id_t id;
+      if (send_to_Cursor == 1) {
+        dst = neighbour_table.neighbours[send_to_Cursor - 1].uid;
+      } else {
+        dst = get_broadcast_uid();
+      }
+      if (msg_Type == 0){
+        id = (text_id_t)(message_Cursor + ((msg_received_Page - 1) * 3));
+        try_transmit(new_text_message(dst, id));
+      } else if (msg_Type == 1){
+        if (neighbour_Request_Cursor == 0){ // Version
+          key = 0;
+        } else if (neighbour_Request_Cursor == 1){ // Uptime
+          key = 2;
+        }
+        try_transmit(new_request_message(dst, key));
+      } else if (msg_Type == 2){
+        try_transmit(new_ping_message(dst));
+      }
+      // Possibly add animation to show message is being sent
+
+      break;
+
     case DISPLAY_MSG:
       // printf("Send Msg."); //For testing purposes
       // state = STATE_TX_READY;
+      msg_Type = 0;
+      send_To_Screen();
+      display = DISPLAY_SEND_TO;
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
       break;
 
     case DISPLAY_SETTINGS:
@@ -331,10 +383,19 @@ void handle_button_callback(uint gpio, uint32_t events) {
       if (neighbour_Action_Cursor == 0) {
         // Send a text msg
         printf("text.\n");
+        msg_Screen();
+        display = DISPLAY_MSG;
+        refresh_Counter = 15;
+        screen = SCREEN_DRAW_READY;
       } else if (neighbour_Action_Cursor == 1) {
         // Send Ping message
         printf("ping.\n");
-        try_transmit(new_ping_message(neighbour_table.neighbours[neighbour_Table_Cursor + ((neighbour_received_Page - 1) * 3)].uid));
+        //try_transmit(new_ping_message(neighbour_table.neighbours[neighbour_Table_Cursor + ((neighbour_received_Page - 1) * 3)].uid));
+        msg_Type = 2;
+        send_To_Screen();
+        display = DISPLAY_SEND_TO;
+        refresh_Counter = 15;
+        screen = SCREEN_DRAW_READY;
       } else if (neighbour_Action_Cursor == 2) {
         // Send Request message
         printf("request.\n");
@@ -346,14 +407,10 @@ void handle_button_callback(uint gpio, uint32_t events) {
       break;
 
     case DISPLAY_NEIGHBOURS_REQUEST:
-      if (neighbour_Request_Cursor == 0) {
-        //try_transmit(new_request_message(dst, 0)); // Version
-      }
-      if (neighbour_Request_Cursor == 1)
-      {
-        //try_transmit(new_request_message(dst, 2)); // Uptime
-      }
-      // pick who to request from and add animation
+      msg_Type = 1;
+      send_To_Screen();
+      display = DISPLAY_SEND_TO;
+      refresh_Counter = 15;
       screen = SCREEN_DRAW_READY;
       break;
 
@@ -389,7 +446,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
       //new_Messages[message_history_count] = 1;
       //msg_Number++;
       //new_Msg++;
-      //screen = SCREEN_DRAW_READY;
+      screen = SCREEN_DRAW_READY;
 
       break;
 
@@ -411,9 +468,25 @@ void handle_button_callback(uint gpio, uint32_t events) {
       screen = SCREEN_DRAW_READY;
       break;
 
+    case DISPLAY_SEND_TO:
+    if (msg_Type == 0){
+      display = DISPLAY_MSG;
+      msg_Screen();
+    } else if (msg_Type == 1){
+      display = DISPLAY_NEIGHBOURS_REQUEST;
+      neighbours_Request();
+    } else if (msg_Type == 2){
+      display = DISPLAY_NEIGHBOURS_ACTION;
+      neighbours_Action();
+    }
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+      break;
+
     case DISPLAY_MSG:
       // printf("Send Msg."); //For testing purposes
       display = DISPLAY_HOME;
+      msg_received_Page = 1;
       home_Screen();
       refresh_Counter = 15;
       screen = SCREEN_DRAW_READY;
@@ -438,6 +511,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
 
     case DISPLAY_NEIGHBOURS_TABLE:
       display = DISPLAY_NEIGHBOURS;
+      neighbour_received_Page = 1;
       neighbours_Screen();
       refresh_Counter = 15;
       screen = SCREEN_DRAW_READY;
@@ -490,9 +564,21 @@ void handle_button_callback(uint gpio, uint32_t events) {
       screen = SCREEN_DRAW_READY;
       break;
 
+    case DISPLAY_SEND_TO:
+      display = DISPLAY_HOME;
+      msg_received_Page = 1;
+      received_Page = 1;
+      neighbour_received_Page = 1;
+      home_Screen();
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+ 
+      break;
+
     case DISPLAY_MSG:
       // printf("Send Msg."); //For testing purposes
       display = DISPLAY_HOME;
+      msg_received_Page = 1;
       home_Screen();
       refresh_Counter = 15;
       screen = SCREEN_DRAW_READY;
@@ -517,6 +603,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
 
     case DISPLAY_NEIGHBOURS_TABLE:
       display = DISPLAY_HOME;
+      neighbour_received_Page = 1;
       home_Screen();
       refresh_Counter = 15;
       screen = SCREEN_DRAW_READY;
@@ -524,6 +611,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
 
     case DISPLAY_NEIGHBOURS_ACTION:
       display = DISPLAY_HOME;
+      neighbour_received_Page = 1;
       home_Screen();
       refresh_Counter = 15;
       screen = SCREEN_DRAW_READY;
@@ -531,6 +619,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
 
     case DISPLAY_NEIGHBOURS_REQUEST:
       display = DISPLAY_HOME;
+      neighbour_received_Page = 1;
       home_Screen();
       refresh_Counter = 15;
       screen = SCREEN_DRAW_READY;
