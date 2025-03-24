@@ -18,6 +18,7 @@ extern screen_t screen;
 // display screens state machine
 typedef enum {
   DISPLAY_HOME,
+  DISPLAY_SEND_TO,
   DISPLAY_MSG,
   DISPLAY_RXMSG,
   DISPLAY_RXMSG_DETAILS,
@@ -66,6 +67,7 @@ extern uint32_t new_Msg;
 void setup_display();
 
 void wakeup_Screen();
+void send_To_Screen();
 void msg_Screen();
 void received_msg_Details();
 void received_Msgs();

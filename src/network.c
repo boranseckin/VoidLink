@@ -14,6 +14,7 @@
 
 #include "network.h"
 #include "utils.h"
+#include "screen.h"
 
 queue_t tx_queue;
 queue_t rx_queue;
@@ -413,4 +414,7 @@ void handle_message(message_t *incoming) {
   } else if (incoming->mtype == MTYPE_RAW) {
     printf("rx: raw: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
   }
+  //new msg notification
+  new_Messages[message_history_count] = 1;
+  new_Msg++;
 }

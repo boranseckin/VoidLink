@@ -64,8 +64,17 @@ void wakeup_Screen() {
   EPD_2in13_V4_Display_Fast(wakeup);
   busy_wait_ms(200);
 }
+// Who will you send to?
+void send_To_Screen(){
+  // Create a new display buffer
+  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  // Paint the whole frame white
+  Paint_Clear(WHITE);
 
-// Broadcast msg screen
+  // Draw message selection screen
+  Paint_DrawString(0, 5, "Who do you want to send to?", &Font16, BLACK, WHITE);
+}
+
 void msg_Screen() {
   // Create a new display buffer
   Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
@@ -153,7 +162,15 @@ void received_Msgs() {
                        WHITE); // replace with new_String
 
       int time = absolute_time_diff_us(message_history[i + ((received_Page - 1) * 3)].time,get_absolute_time())/1000/1000;
-      sprintf(buff, "%ds ago",time); //Get time_Stamp from network code
+      if (time > 60) {
+        time = time / 60;
+        sprintf(buff, "%dm ago",time);
+      } else if (time > 60 * 60) {
+        time = (float)time / 60 / 60;
+        sprintf(buff, "%dh ago",time);
+      }else {
+        sprintf(buff, "%ds ago",time);
+      }
       Paint_DrawString(130, 47 + i * 24, buff, &Font12, BLACK,
                        WHITE);
     }
@@ -231,22 +248,14 @@ void neighbours_Action() {
     Paint_DrawString(5, 100, "Text", &Font16, WHITE, BLACK);
     Paint_DrawString(55, 100, "Ping", &Font16, BLACK, WHITE);
     Paint_DrawString(105, 100, "Request", &Font16, BLACK, WHITE);
-    Paint_DrawString(155, 100, "Remove", &Font16, BLACK, WHITE);
   } else if (neighbour_Action_Cursor == 1) {
     Paint_DrawString(5, 100, "Text", &Font16, BLACK, WHITE);
     Paint_DrawString(55, 100, "Ping", &Font16, WHITE, BLACK);
     Paint_DrawString(105, 100, "Request", &Font16, BLACK, WHITE);
-    Paint_DrawString(155, 100, "Remove", &Font16, BLACK, WHITE);
   } else if (neighbour_Action_Cursor == 2) {
     Paint_DrawString(5, 100, "Text", &Font16, BLACK, WHITE);
     Paint_DrawString(55, 100, "Ping", &Font16, BLACK, WHITE);
     Paint_DrawString(105, 100, "Request", &Font16, WHITE, BLACK);
-    Paint_DrawString(155, 100, "Remove", &Font16, BLACK, WHITE);
-  } else if (neighbour_Action_Cursor == 3) {
-    Paint_DrawString(5, 100, "Text", &Font16, BLACK, WHITE);
-    Paint_DrawString(55, 100, "Ping", &Font16, BLACK, WHITE);
-    Paint_DrawString(105, 100, "Request", &Font16, BLACK, WHITE);
-    Paint_DrawString(155, 100, "Remove", &Font16, WHITE, BLACK);
   }
 }
 
@@ -294,6 +303,27 @@ void neighbours_Table() {
 
 void neighbours_Request(){
   printf("Requesting Neighbours/n");
+  // Create a new display buffer
+  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  // Paint the whole frame white
+  Paint_Clear(WHITE);
+  Paint_DrawString(0, 5, "Request:", &Font16, BLACK, WHITE);
+
+  // Draw message selection screen
+  if (neighbour_Request_Cursor == 0) {
+    // Neighbours table selected
+    Paint_DrawRectangle(15, 29, 210, 65, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
+    Paint_DrawString(27, 39, "Version", &Font16, WHITE, WHITE);
+    Paint_DrawRectangle(15, 71, 210, 107, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
+    Paint_DrawString(22, 81, "Uptime", &Font16, BLACK, WHITE);
+  }
+  if (neighbour_Request_Cursor == 1) {
+    // msg screen selected
+    Paint_DrawRectangle(15, 29, 210, 65, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
+    Paint_DrawString(27, 39, "Version", &Font16, BLACK, WHITE);
+    Paint_DrawRectangle(15, 71, 210, 107, BLACK, DOT_PIXEL_2X2, DRAW_FILL_FULL);
+    Paint_DrawString(22, 81, "Uptime", &Font16, WHITE, WHITE);
+  }
 }
 
 void neighbours_Screen() {

@@ -28,11 +28,11 @@ void handle_button_callback(uint gpio, uint32_t events) {
     case DISPLAY_RXMSG:
       printf("On Received Messages Screen.\n"); // For testing purposes
       // Reset cursor if moving to new page
-      if (received_Cursor == 2 && (msg_Number - (received_Page - 1) * 3) > 3) {
+      if (received_Cursor == 2 && (message_history_count - (received_Page - 1) * 3) > 3) {
         received_Page++;
         received_Cursor = 0;
       } else {
-        received_Cursor = (received_Cursor + 1) % (msg_Number - (received_Page - 1) * 3);
+        received_Cursor = (received_Cursor + 1) % (message_history_count - (received_Page - 1) * 3);
       }
       // Display cursor
       received_Msgs();
@@ -88,10 +88,16 @@ void handle_button_callback(uint gpio, uint32_t events) {
       break;
 
     case DISPLAY_NEIGHBOURS_ACTION:
-      neighbour_Action_Cursor = (neighbour_Action_Cursor + 1) % 4;
+      neighbour_Action_Cursor = (neighbour_Action_Cursor + 1) % 3;
       neighbours_Action();
       screen = SCREEN_DRAW_READY;
       break;
+
+    case DISPLAY_NEIGHBOURS_REQUEST:
+      neighbour_Request_Cursor = (neighbour_Request_Cursor + 1) % 2;
+      neighbours_Request();
+      screen = SCREEN_DRAW_READY;
+    break;
 
     case DISPLAY_NEIGHBOURS:
       printf("On Neighbours Screen.\n"); // For testing purposes
@@ -120,7 +126,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
         received_Page--;
         received_Cursor = 2;
       } else {
-        received_Cursor = (received_Cursor - 1 + (msg_Number - (received_Page - 1) * 3)) % (msg_Number - (received_Page - 1) * 3);
+        received_Cursor = (received_Cursor - 1 + (message_history_count - (received_Page - 1) * 3)) % (message_history_count - (received_Page - 1) * 3);
       }
       // Display cursor
       received_Msgs();
@@ -176,8 +182,14 @@ void handle_button_callback(uint gpio, uint32_t events) {
       break;
 
     case DISPLAY_NEIGHBOURS_ACTION:
-      neighbour_Action_Cursor = (neighbour_Action_Cursor - 1 + 2) % 4;
+      neighbour_Action_Cursor = (neighbour_Action_Cursor - 1 + 3) % 3;
       neighbours_Action();
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_NEIGHBOURS_REQUEST:
+      neighbour_Request_Cursor = (neighbour_Request_Cursor - 1 + 2) % 2;
+      neighbours_Request();
       screen = SCREEN_DRAW_READY;
       break;
 
@@ -326,10 +338,23 @@ void handle_button_callback(uint gpio, uint32_t events) {
       } else if (neighbour_Action_Cursor == 2) {
         // Send Request message
         printf("request.\n");
-      } else if (neighbour_Action_Cursor == 3) {
-        // Remove neighbour
-        printf("remove.\n");
+        neighbours_Request();
+        display = DISPLAY_NEIGHBOURS_REQUEST;
+        refresh_Counter = 15;
+        screen = SCREEN_DRAW_READY;
       }
+      break;
+
+    case DISPLAY_NEIGHBOURS_REQUEST:
+      if (neighbour_Request_Cursor == 0) {
+        //try_transmit(new_request_message(dst, 0)); // Version
+      }
+      if (neighbour_Request_Cursor == 1)
+      {
+        //try_transmit(new_request_message(dst, 2)); // Uptime
+      }
+      // pick who to request from and add animation
+      screen = SCREEN_DRAW_READY;
       break;
 
     case DISPLAY_NEIGHBOURS:
@@ -359,12 +384,12 @@ void handle_button_callback(uint gpio, uint32_t events) {
     case DISPLAY_HOME:
       printf("Already at home\n"); // For testing purposes
       // Add selection drawings for home screen
-      sprintf(test, "TEST %d", msg_Number);
-      strcpy(saved_Messages[msg_Number], test);
-      new_Messages[msg_Number] = 1;
-      msg_Number++;
-      new_Msg++;
-      screen = SCREEN_DRAW_READY;
+      //sprintf(test, "TEST %d", message_history_count);
+      //strcpy(saved_Messages[message_history_count], test);
+      //new_Messages[message_history_count] = 1;
+      //msg_Number++;
+      //new_Msg++;
+      //screen = SCREEN_DRAW_READY;
 
       break;
 
@@ -421,6 +446,92 @@ void handle_button_callback(uint gpio, uint32_t events) {
     case DISPLAY_NEIGHBOURS_ACTION:
       display = DISPLAY_NEIGHBOURS_TABLE;
       neighbours_Table();
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_NEIGHBOURS_REQUEST:
+      display = DISPLAY_NEIGHBOURS_ACTION;
+      neighbours_Action();
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_NEIGHBOURS:
+      display = DISPLAY_HOME;
+      home_Screen();
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+      break;
+    }
+  } else if (gpio == PIN_BUTTON_HOME) {
+
+    switch (display) {
+    case DISPLAY_HOME:
+      printf("Already at home\n"); // For testing purposes
+      break;
+
+    case DISPLAY_RXMSG:
+      // Add selection drawings for received messages screen
+      printf("Going home.\n"); // For testing purposes
+      display = DISPLAY_HOME;
+      received_Page = 1;
+      home_Screen();
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_RXMSG_DETAILS:
+      // Add selection drawings for received messages screen
+      display = DISPLAY_HOME;
+      received_Page = 1;
+      home_Screen();
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_MSG:
+      // printf("Send Msg."); //For testing purposes
+      display = DISPLAY_HOME;
+      home_Screen();
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_SETTINGS:
+      // printf("On Settings Screen."); //For testing purposes
+      //  Add selection drawings for settings screen
+      display = DISPLAY_HOME;
+      home_Screen();
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_SETTINGS_INFO:
+      set_Info_Cursor = temp_Cursor;
+      home_Screen();
+      display = DISPLAY_HOME;
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_NEIGHBOURS_TABLE:
+      display = DISPLAY_HOME;
+      home_Screen();
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_NEIGHBOURS_ACTION:
+      display = DISPLAY_HOME;
+      home_Screen();
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_NEIGHBOURS_REQUEST:
+      display = DISPLAY_HOME;
+      home_Screen();
       refresh_Counter = 15;
       screen = SCREEN_DRAW_READY;
       break;
