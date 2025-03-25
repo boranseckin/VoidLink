@@ -78,36 +78,36 @@ void send_To_Screen(){
 
   // Draw message selection screen
   if (msg_Type == 0){ //msg_Type = 0 is text message
-    Paint_DrawString(0, 35, "Who do you want to send to?", &Font16, BLACK, WHITE);
-    Paint_DrawString(20, 5, "Sending Message:", &Font16, BLACK, WHITE);
-    Paint_DrawString(55, 5, send_Message[send_to_Cursor + ((msg_received_Page - 1) * 3)], &Font16,
+    Paint_DrawString(15, 35, "Who to send to?", &Font16, BLACK, WHITE);
+    Paint_DrawString(5, 5, "Sending Message:", &Font16, BLACK, WHITE);
+    Paint_DrawString(180, 5, send_Message[send_to_Cursor + ((msg_received_Page - 1) * 3)], &Font16,
                          BLACK, WHITE);
   } else if (msg_Type == 1){ //msg_Type = 1 is request message
-    Paint_DrawString(0, 35, "Who do you want to request from?", &Font16, BLACK, WHITE);
-    Paint_DrawString(20, 5, "Requesting Info:", &Font16, BLACK, WHITE);
+    Paint_DrawString(15, 35, "Who to request from?", &Font16, BLACK, WHITE);
+    Paint_DrawString(0, 5, "Requesting Info:", &Font16, BLACK, WHITE);
     if (neighbour_Request_Cursor == 0) {
-      Paint_DrawString(55, 5, "Version", &Font16,
+      Paint_DrawString(180, 5, "Version", &Font16,
                          BLACK, WHITE);
     } else if (neighbour_Request_Cursor == 1) {
-      Paint_DrawString(55, 5, "Uptime", &Font16,
+      Paint_DrawString(180, 5, "Uptime", &Font16,
                          BLACK, WHITE);
     }
   } else if (msg_Type == 2){ //msg_Type = 2 is ping message
-    Paint_DrawString(0, 35, "Who do you want to ping?", &Font16, BLACK, WHITE);
-    Paint_DrawString(20, 5, "Sending ping.", &Font16, BLACK, WHITE);
+    Paint_DrawString(15, 35, "Who do you want to ping?", &Font16, BLACK, WHITE);
+    Paint_DrawString(5, 5, "Sending ping.", &Font16, BLACK, WHITE);
   }
-  Paint_DrawString(150, 70, ">", &Font16, BLACK, WHITE);
-  Paint_DrawString(10, 70, "<", &Font16, BLACK, WHITE);
+  Paint_DrawString(180, 70, ">", &Font16, BLACK, WHITE);
+  Paint_DrawString(20, 70, "<", &Font16, BLACK, WHITE);
   char *src;
 
   if (send_to_Cursor == 0) {
-    Paint_DrawString(35, 70, "Broadcast to all", &Font16, WHITE, BLACK);
+    Paint_DrawString(55, 70, "Broadcast to all", &Font16, WHITE, BLACK);
   } else {
     neighbour_t *neighbour_Node = &neighbour_table.neighbours[send_to_Cursor - 1];
     src = uid_to_string(neighbour_Node->uid);
-    Paint_DrawString(35, 70, src, &Font16, BLACK, WHITE);
+    Paint_DrawString(55, 70, src, &Font16, BLACK, WHITE);
   }
-  Paint_DrawString(70, 100, "Press the OK/Confirm button to transmit.", &Font16, BLACK, WHITE);
+  Paint_DrawString(5, 85, "Press the OK/Confirm button to transmit.", &Font12, BLACK, WHITE);
 }
 
 void msg_Screen() {

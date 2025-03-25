@@ -272,7 +272,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
         screen = SCREEN_DRAW_READY;
       }
 
-      if (msg_Action_Cursor == 1) {
+      if (msg_Action_Cursor == 1) { // Will remove
         // Delete message
         // Delete message from saved messages array
         // Refresh screen
@@ -485,9 +485,9 @@ void handle_button_callback(uint gpio, uint32_t events) {
 
     case DISPLAY_MSG:
       // printf("Send Msg."); //For testing purposes
-      display = DISPLAY_HOME;
+      display = DISPLAY_NEIGHBOURS_ACTION;
       msg_received_Page = 1;
-      home_Screen();
+      neighbours_Action();
       refresh_Counter = 15;
       screen = SCREEN_DRAW_READY;
       break;

@@ -371,6 +371,9 @@ void try_transmit(message_t message) {
  * RAW: do nothing
  */
 void handle_message(message_t *incoming) {
+  //new msg notification
+  new_Messages[message_history_head] = 1;
+  new_Msg++;
   printf("message received from %s", uid_to_string(incoming->src));
   printf(" to %s\n", uid_to_string(incoming->dst));
 
@@ -414,7 +417,4 @@ void handle_message(message_t *incoming) {
   } else if (incoming->mtype == MTYPE_RAW) {
     printf("rx: raw: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
   }
-  //new msg notification
-  new_Messages[message_history_count] = 1;
-  new_Msg++;
 }
