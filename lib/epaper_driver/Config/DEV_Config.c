@@ -28,8 +28,7 @@
 #
 ******************************************************************************/
 #include "DEV_Config.h"
-
-#define SPI_PORT spi1
+#include "../../../src/pico/pico_config.h"
 
 /**
  * GPIO
@@ -51,9 +50,11 @@ UBYTE DEV_Digital_Read(UWORD Pin) { return gpio_get(Pin); }
 /**
  * SPI
  **/
-void DEV_SPI_WriteByte(uint8_t Value) { spi_write_blocking(SPI_PORT, &Value, 1); }
+void DEV_SPI_WriteByte(uint8_t Value) { spi_write_blocking(DISPLAY_SPI_PORT, &Value, 1); }
 
-void DEV_SPI_Write_nByte(uint8_t *pData, uint32_t Len) { spi_write_blocking(SPI_PORT, pData, Len); }
+void DEV_SPI_Write_nByte(uint8_t *pData, uint32_t Len) {
+  spi_write_blocking(DISPLAY_SPI_PORT, pData, Len);
+}
 
 /**
  * GPIO Mode
@@ -73,13 +74,13 @@ void DEV_GPIO_Mode(UWORD Pin, UWORD Mode) {
 void DEV_Delay_ms(UDOUBLE xms) { busy_wait_ms(xms); }
 
 void DEV_GPIO_Init(void) {
-  EPD_RST_PIN = 12;
-  EPD_DC_PIN = 8;
-  EPD_BUSY_PIN = 13;
+  EPD_RST_PIN = PIN_DISPLAY_RST;
+  EPD_DC_PIN = PIN_DISPLAY_DC;
+  EPD_BUSY_PIN = PIN_DISPLAY_BUSY;
 
-  EPD_CS_PIN = 9;
-  EPD_CLK_PIN = 10;
-  EPD_MOSI_PIN = 11;
+  EPD_CS_PIN = PIN_DISPLAY_CS;
+  EPD_CLK_PIN = PIN_DISPLAY_CLK;
+  EPD_MOSI_PIN = PIN_DISPLAY_MOSI;
 
   DEV_GPIO_Mode(EPD_RST_PIN, 1);
   DEV_GPIO_Mode(EPD_DC_PIN, 1);
@@ -100,7 +101,7 @@ UBYTE DEV_Module_Init(void) {
   // GPIO Config
   DEV_GPIO_Init();
 
-  spi_init(SPI_PORT, 4000 * 1000);
+  spi_init(DISPLAY_SPI_PORT, 4000 * 1000);
   gpio_set_function(EPD_CLK_PIN, GPIO_OUT);
   gpio_set_function(EPD_MOSI_PIN, GPIO_OUT);
 
@@ -108,7 +109,7 @@ UBYTE DEV_Module_Init(void) {
 }
 
 void DEV_SPI_Init(void) {
-  spi_init(SPI_PORT, 4000 * 1000);
+  spi_init(DISPLAY_SPI_PORT, 4000 * 1000);
   gpio_set_function(EPD_CLK_PIN, GPIO_FUNC_SPI);
   gpio_set_function(EPD_MOSI_PIN, GPIO_FUNC_SPI);
 }
