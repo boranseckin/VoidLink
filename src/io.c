@@ -272,12 +272,9 @@ void handle_button_callback(uint gpio, uint32_t events) {
         screen = SCREEN_DRAW_READY;
       }
 
-      if (msg_Action_Cursor == 1) { // Will remove
-        // Delete message
-        // Delete message from saved messages array
-        // Refresh screen
-        received_Msgs();
-        display = DISPLAY_RXMSG;
+      if (msg_Action_Cursor == 1) { // Go to Neighbours screen
+        neighbours_Table();
+        display = DISPLAY_NEIGHBOURS_TABLE;
         refresh_Counter = 15;
         screen = SCREEN_DRAW_READY;
       }
@@ -469,16 +466,16 @@ void handle_button_callback(uint gpio, uint32_t events) {
       break;
 
     case DISPLAY_SEND_TO:
-    if (msg_Type == 0){
-      display = DISPLAY_MSG;
-      msg_Screen();
-    } else if (msg_Type == 1){
-      display = DISPLAY_NEIGHBOURS_REQUEST;
-      neighbours_Request();
-    } else if (msg_Type == 2){
-      display = DISPLAY_NEIGHBOURS_ACTION;
-      neighbours_Action();
-    }
+      if (msg_Type == 0){
+        display = DISPLAY_MSG;
+        msg_Screen();
+      } else if (msg_Type == 1){
+        display = DISPLAY_NEIGHBOURS_REQUEST;
+        neighbours_Request();
+      } else if (msg_Type == 2){
+        display = DISPLAY_NEIGHBOURS_ACTION;
+        neighbours_Action();
+      }
       refresh_Counter = 15;
       screen = SCREEN_DRAW_READY;
       break;
@@ -631,6 +628,13 @@ void handle_button_callback(uint gpio, uint32_t events) {
       refresh_Counter = 15;
       screen = SCREEN_DRAW_READY;
       break;
+    }
+  } else if (gpio == PIN_BUTTON_SLEEP) {
+    if (five_Seconds == true){ // Currently Sleeping, wake up
+      screen = SCREEN_DRAW_READY;
+    }
+    if (five_Seconds == false){ // Currently awake, Go To Sleep
+      go_to_Sleep();
     }
   }
 }

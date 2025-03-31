@@ -169,15 +169,24 @@ void received_msg_Details() {
   Paint_DrawString(0, 55, type, &Font12, BLACK, WHITE);
   char buff[64];
   int time = absolute_time_diff_us(message_history[received_Cursor + ((received_Page - 1) * 3)].time,get_absolute_time())/1000/1000;
-  sprintf(buff, "%ds ago",time); //Get time_Stamp from network code
+  if (time > 60) {
+    time = time / 60;
+    sprintf(buff, "%dm ago",time);
+  } else if (time > 60 * 60) {
+    time = (float)time / 60 / 60;
+    sprintf(buff, "%dh ago",time);
+  }else {
+    sprintf(buff, "%ds ago",time);
+  }
+  //sprintf(buff, "%ds ago",time); //Get time_Stamp from network code
   Paint_DrawString(170, 75, buff, &Font12, BLACK, WHITE); // replace with new_String
 
   if (msg_Action_Cursor == 0) {
     Paint_DrawString(20, 100, "Reply", &Font16, WHITE, BLACK);
-    Paint_DrawString(150, 100, "Delete", &Font16, BLACK, WHITE);
+    Paint_DrawString(150, 100, "Neighbours", &Font16, BLACK, WHITE);
   } else if (msg_Action_Cursor == 1) {
     Paint_DrawString(20, 100, "Reply", &Font16, BLACK, WHITE);
-    Paint_DrawString(150, 100, "Delete", &Font16, WHITE, BLACK);
+    Paint_DrawString(150, 100, "Neighbours", &Font16, WHITE, BLACK);
   }
 }
 
@@ -537,6 +546,14 @@ void settings_Screen() {
 
   // Display cursor
   // Paint_DrawString(0, 34, ">", &Font16, BLACK, WHITE);
+}
+
+void go_to_Sleep(){
+  five_Seconds = true;
+  cancel_alarm(alarm_id);
+  Paint_DrawString(225, 0, "SLP", &Font12, WHITE, BLACK);
+  EPD_2in13_V4_Display_Partial(image);
+  EPD_2in13_V4_Sleep();
 }
 
 int64_t alarm_callback(alarm_id_t id, void *user_data) {
