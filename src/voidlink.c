@@ -295,11 +295,13 @@ void setup_sx126x() {
   // Before this step, the radio will fail to start the XOSC. This is expected so, we clear the
   // errors.
   sx126x_clear_device_errors(&context);
-  sx126x_set_dio3_as_tcxo_ctrl(&context, SX126X_TCXO_CTRL_1_7V, 5 << 6);
+#ifndef PIN_CONFIG_v2
+  // sx126x_set_dio3_as_tcxo_ctrl(&context, SX126X_TCXO_CTRL_1_7V, 5 << 6);
 
   // With the TCXO correctly configured now, re-calibrate all the clock on the chip.
-  sx126x_cal_mask_t calibration_mask = 0x7F;
-  sx126x_cal(&context, calibration_mask);
+  // sx126x_cal_mask_t calibration_mask = 0x7F;
+  // sx126x_cal(&context, calibration_mask);
+#endif
 
   // Make sure the calibration succeeded.
   sx126x_errors_mask_t errors = 0;
