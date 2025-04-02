@@ -18,9 +18,6 @@
 #include "utils.h"
 #include "voidlink.h"
 
-// TODO: handle multiple in-flight pings
-absolute_time_t PING_TIME;
-
 queue_t tx_queue;
 queue_t rx_queue;
 
@@ -53,8 +50,8 @@ void setup_network() {
   MID = get_rand_32() & 0xFF;
 
   // Setup the queues.
-  queue_init(&tx_queue, sizeof(message_t), MESSAGE_QUEUE_SIZE);
-  queue_init(&rx_queue, sizeof(message_t), MESSAGE_QUEUE_SIZE);
+  queue_init(&tx_queue, sizeof(message_history_t), MESSAGE_QUEUE_SIZE);
+  queue_init(&rx_queue, sizeof(message_history_t), MESSAGE_QUEUE_SIZE);
 
   debug("network setup done\n");
 }
@@ -118,15 +115,15 @@ message_t new_hello_message() {
 }
 
 // Forms a new ping message.
+// Time field should be filled before transmit.
+// Ping should not hop to accurately calculate time of flight.
 message_t new_ping_message(uid_t dst) {
-  absolute_time_t now = get_absolute_time();
   message_t msg = {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_PING,
-      .flags = {.ack_req = false, .hop_limit = 3},
-      .time = now,
+      .flags = {.ack_req = false, .hop_limit = 0},
       .data = {0x00, 0x00, 0x00},
   };
   return msg;
@@ -358,8 +355,9 @@ void print_acks() {
 
 // Try to add a message to the transit queue to be sent.
 void try_transmit(message_t message) {
-  if (queue_try_add(&tx_queue, &message)) {
-    debug("tx enqueue %d\n", message.id);
+  message_history_t message_with_time = {.time = get_absolute_time(), .message = message};
+  if (queue_try_add(&tx_queue, &message_with_time)) {
+    debug("tx enqueue %d\n", message_with_time.message.id);
   } else {
     error("tx queue is full\n");
   }
@@ -377,12 +375,18 @@ void try_transmit(message_t message) {
  * RES: update the neighbour table
  * RAW: do nothing
  */
-void handle_message(message_t *incoming) {
+void handle_message(message_history_t *message) {
+  message_t *incoming = &message->message;
+  absolute_time_t arrival_time = message->time;
+  int64_t rx_delta = absolute_time_diff_us(arrival_time, get_absolute_time());
+
   // new msg notification
   new_Messages[message_history_head] = 1;
   new_Msg++;
+
   printf("message received from %s", uid_to_string(incoming->src));
   printf(" to %s\n", uid_to_string(incoming->dst));
+  debug("rx queue delta %llu us\n", rx_delta);
 
   if (incoming->mtype == MTYPE_ACK) {
     printf("rx: ack: %d\n", incoming->data[0]);
@@ -394,20 +398,27 @@ void handle_message(message_t *incoming) {
       try_transmit(new_ack_message(incoming->src, incoming->id));
     }
   } else if (incoming->mtype == MTYPE_PING) {
-    printf("rx: ping\n");
+    printf("rx: ping: %llu\n", incoming->time);
     message_t pong = new_pong_message(incoming->src);
-    pong.time = get_absolute_time();
+    // Add elapsed time in rx queue.
+    // This moves the reference to the future, making the time difference smaller.
+    pong.time = incoming->time + rx_delta;
     try_transmit(pong);
   } else if (incoming->mtype == MTYPE_PONG) {
+    absolute_time_t ping_time = incoming->time;
+    // Add elapsed time in rx queue.
+    ping_time += rx_delta;
+    // Add the amount of time it takes for us to transmit.
+    // This value is very consistent between nodes that share the same TX settings.
+    // Therefore, we can multiply it by 2 to account for both sides.
+    ping_time += last_tx_delta * 2;
+
     // Calculate the time it took since we transmitted the ping message.
-    absolute_time_t delta = absolute_time_diff_us(PING_TIME, get_absolute_time());
-    // Remove processing time of the other node.
-    delta -= incoming->time;
+    int64_t delta = absolute_time_diff_us(ping_time, get_absolute_time());
     // Divide by two for round-trip.
     delta /= 2;
-    // Subtract the amount of time it takes for us to transmit.
-    delta -= last_tx_delta;
-    printf("rx: pong: %llu us\n", delta);
+
+    printf("rx: pong: %lld us\n", delta);
   } else if (incoming->mtype == MTYPE_TEXT) {
     printf("rx: text: %s\n", TEXT_MESSAGE_STR[incoming->data[0]]);
   } else if (incoming->mtype == MTYPE_REQ) {

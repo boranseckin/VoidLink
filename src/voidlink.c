@@ -100,6 +100,8 @@ void handle_tx_callback() {
 }
 
 void handle_rx_callback() {
+  absolute_time_t rx_time = get_absolute_time();
+
   // Make sure the data available status is set before reading the rx buffer.
   sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
   sx126x_get_status(&context, &status);
@@ -121,9 +123,9 @@ void handle_rx_callback() {
   }
 
   // Read and print the buffer.
-  message_t rx_payload_buf;
-  sx126x_read_buffer(&context, buffer_status.buffer_start_pointer, (uint8_t *)&rx_payload_buf,
-                     buffer_status.pld_len_in_bytes);
+  message_history_t rx_payload_buf = {.time = rx_time};
+  sx126x_read_buffer(&context, buffer_status.buffer_start_pointer,
+                     (uint8_t *)&rx_payload_buf.message, buffer_status.pld_len_in_bytes);
 
   debug("<-");
   for (int i = 0; i < buffer_status.pld_len_in_bytes; i++) {
@@ -131,7 +133,7 @@ void handle_rx_callback() {
   }
   debug("\n");
 
-  if (is_my_uid(rx_payload_buf.src)) {
+  if (is_my_uid(rx_payload_buf.message.src)) {
     debug("message from myself\n");
     return;
   }
@@ -142,17 +144,21 @@ void handle_rx_callback() {
 
   // Update the neighbour table with the information from received message.
   // TODO: ignore rssi for hopped messages
-  update_neighbour(rx_payload_buf.src, pkt_status.signal_rssi_pkt_in_dbm, 0);
+  update_neighbour(rx_payload_buf.message.src, pkt_status.signal_rssi_pkt_in_dbm, 0);
 
   // Check if the received message is for us.
-  if (!is_my_uid(rx_payload_buf.dst) && !is_broadcast(rx_payload_buf.dst)) {
+  if (!is_my_uid(rx_payload_buf.message.dst) && !is_broadcast(rx_payload_buf.message.dst)) {
     debug("message is not for me\n");
 
     // Check if the message has remaining hops.
-    if (rx_payload_buf.flags.hop_limit > 0) {
-      rx_payload_buf.flags.hop_limit--;
-      debug("forwarding message (%d hops remaining)\n", rx_payload_buf.flags.hop_limit);
-      try_transmit(rx_payload_buf);
+    if (rx_payload_buf.message.flags.hop_limit > 0) {
+      rx_payload_buf.message.flags.hop_limit--;
+      debug("forwarding message (%d hops remaining)\n", rx_payload_buf.message.flags.hop_limit);
+      if (queue_try_add(&tx_queue, &rx_payload_buf)) {
+        debug("tx enqueue %d\n", rx_payload_buf.message.id);
+      } else {
+        error("tx queue is full\n");
+      }
     } else {
       debug("not forwarding message, hop limit reached\n");
     }
@@ -162,7 +168,7 @@ void handle_rx_callback() {
 
   // Add message to the receive queue.
   if (queue_try_add(&rx_queue, &rx_payload_buf)) {
-    debug("rx enqueue %d\n", rx_payload_buf.id);
+    debug("rx enqueue %d\n", rx_payload_buf.message.id);
   } else {
     // TODO: maybe drop the oldest message instead
     error("rx queue is full, dropping message\n");
@@ -416,7 +422,7 @@ void transmit_bytes(uint8_t *bytes, uint8_t length) {
 // Transmit a string over the radio. Must be null terminated.
 void transmit_string(char *string) { transmit_bytes((uint8_t *)string, strlen(string)); }
 
-void transmit_packet(message_t *packet) {
+void transmit_packet(message_history_t *packet) {
   // Wait for a random amount of time.
   uint32_t timeout = get_rand_32();
 
@@ -431,12 +437,18 @@ void transmit_packet(message_t *packet) {
   debug("sleeping for %d ms\n", timeout);
   sleep_ms(timeout);
 
-  if (packet->mtype == MTYPE_PING) {
-    PING_TIME = get_absolute_time();
-    debug("ping time: %llu\n", PING_TIME);
-  } else if (packet->mtype == MTYPE_PONG) {
-    // Difference between when we received ping and when we are sending pong.
-    packet->time = absolute_time_diff_us(packet->time, get_absolute_time());
+  // This is not the absolute delta, since `transmit_bytes` function also takes time configuring the
+  // transceiver.
+  int64_t tx_delta = absolute_time_diff_us(packet->time, get_absolute_time());
+  debug("tx queue delta %llu us\n", tx_delta);
+
+  if (packet->message.mtype == MTYPE_PING) {
+    // For pings, set the current time as the time field.
+    packet->message.time = get_absolute_time();
+  } else if (packet->message.mtype == MTYPE_PONG) {
+    // For pongs, add time spent doing tx.
+    // This moves the reference to the future, making the difference smaller.
+    packet->message.time = packet->message.time + tx_delta;
   }
 
   debug("->");
@@ -445,8 +457,8 @@ void transmit_packet(message_t *packet) {
   }
   debug("\n");
 
-  debug("message sent from %s", uid_to_string(packet->src));
-  debug(" to %s\n", uid_to_string(packet->dst));
+  debug("message sent from %s", uid_to_string(packet->message.src));
+  debug(" to %s\n", uid_to_string(packet->message.dst));
 
   transmit_bytes((uint8_t *)packet, sizeof(message_t));
 }
@@ -484,7 +496,7 @@ void core1_entry() {
 }
 
 int main() {
-  message_t message;
+  message_history_t message;
 
   setup_io();
   setup_display();
@@ -500,21 +512,21 @@ int main() {
   while (true) {
     // Process one previously received message.
     if (!STOP_PROCESSING && queue_try_remove(&rx_queue, &message)) {
-      debug("rx dequeue %d\n", message.id);
+      debug("rx dequeue %d\n", message.message.id);
       // Update the message history with the received message.
       // If the message is already received, ignore it.
-      if (!check_message_history(message)) {
+      if (!check_message_history(message.message)) {
         handle_message(&message);
       }
     }
 
     // Transmit one message if we are not already transmitting.
     if (state != STATE_TX && queue_try_remove(&tx_queue, &message)) {
-      debug("tx dequeue %d\n", message.id);
+      debug("tx dequeue %d\n", message.message.id);
 
-      if (message.flags.ack_req) {
+      if (message.message.flags.ack_req) {
         // Add the message to the ack list to keep track of it.
-        add_ack(&message);
+        add_ack(&message.message);
       }
 
       // Set TX state before calling transmit in case IRQ triggers before we finish.

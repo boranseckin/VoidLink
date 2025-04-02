@@ -29,7 +29,7 @@ void setup_sx126x();
 
 void transmit_bytes(uint8_t *bytes, uint8_t length);
 void transmit_string(char *string);
-void transmit_packet(message_t *packet);
+void transmit_packet(message_history_t *packet);
 
 void receive_once();
 void receive_cont();

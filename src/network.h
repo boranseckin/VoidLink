@@ -23,8 +23,6 @@
 extern queue_t tx_queue;
 // Incoming message queue.
 extern queue_t rx_queue;
-// When PING is transmitted. Used for elapsed time calculation.
-extern absolute_time_t PING_TIME;
 
 // 16 predefined text messages.
 typedef enum __attribute__((__packed__)) {
@@ -178,6 +176,6 @@ void print_acks();
 
 void try_transmit(message_t message);
 
-void handle_message(message_t *incoming);
+void handle_message(message_history_t *message);
 
 #endif // _NETWORK_H
