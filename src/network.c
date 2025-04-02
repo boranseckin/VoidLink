@@ -377,8 +377,7 @@ void try_transmit(message_t message) {
  */
 void handle_message(message_history_t *message) {
   message_t *incoming = &message->message;
-  absolute_time_t arrival_time = message->time;
-  int64_t rx_delta = absolute_time_diff_us(arrival_time, get_absolute_time());
+  int64_t rx_delta = absolute_time_diff_us(message->time, get_absolute_time());
 
   // new msg notification
   new_Messages[message_history_head] = 1;

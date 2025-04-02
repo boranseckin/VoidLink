@@ -437,8 +437,9 @@ void transmit_packet(message_history_t *packet) {
   debug("sleeping for %d ms\n", timeout);
   sleep_ms(timeout);
 
-  // This is not the absolute delta, since `transmit_bytes` function also takes time configuring the
-  // transceiver.
+  // This is the time spent in the tx_queue for this packet.
+  // This is not the absolute tx delta, since `transmit_bytes` function also takes time configuring
+  // the transceiver. That part gets accounted for on the receiver side.
   int64_t tx_delta = absolute_time_diff_us(packet->time, get_absolute_time());
   debug("tx queue delta %llu us\n", tx_delta);
 
@@ -446,7 +447,7 @@ void transmit_packet(message_history_t *packet) {
     // For pings, set the current time as the time field.
     packet->message.time = get_absolute_time();
   } else if (packet->message.mtype == MTYPE_PONG) {
-    // For pongs, add time spent doing tx.
+    // For pongs, add time spent in tx_queue.
     // This moves the reference to the future, making the difference smaller.
     packet->message.time = packet->message.time + tx_delta;
   }
