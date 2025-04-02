@@ -23,6 +23,8 @@
 extern queue_t tx_queue;
 // Incoming message queue.
 extern queue_t rx_queue;
+// When PING is transmitted. Used for elapsed time calculation.
+extern absolute_time_t PING_TIME;
 
 // 16 predefined text messages.
 typedef enum __attribute__((__packed__)) {
@@ -123,7 +125,7 @@ typedef struct {
   mid_t id;
   mtype_t mtype;
   flags_t flags;
-  uint8_t reserved[4];
+  uint64_t time;
   uint8_t data[3];
 } message_t;
 

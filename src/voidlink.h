@@ -3,12 +3,18 @@
 
 #include <stdint.h>
 
+#include "pico/types.h"
+
 #include "network.h"
 #include "utils.h"
+
+extern absolute_time_t last_tx_start;
+extern absolute_time_t last_tx_delta;
 
 extern bool STOP_PROCESSING;
 
 void set_range(mod_params_t param);
+uint32_t get_time_on_air_in_ms();
 
 void handle_tx_callback();
 void handle_rx_callback();

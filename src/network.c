@@ -9,12 +9,17 @@
 
 #include "pico/rand.h"
 #include "pico/time.h"
+#include "pico/types.h"
 #include "pico/unique_id.h"
 #include "pico/util/queue.h"
 
 #include "network.h"
-#include "utils.h"
 #include "screen.h"
+#include "utils.h"
+#include "voidlink.h"
+
+// TODO: handle multiple in-flight pings
+absolute_time_t PING_TIME;
 
 queue_t tx_queue;
 queue_t rx_queue;
@@ -114,12 +119,14 @@ message_t new_hello_message() {
 
 // Forms a new ping message.
 message_t new_ping_message(uid_t dst) {
+  absolute_time_t now = get_absolute_time();
   message_t msg = {
       .dst = dst,
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_PING,
       .flags = {.ack_req = false, .hop_limit = 3},
+      .time = now,
       .data = {0x00, 0x00, 0x00},
   };
   return msg;
@@ -371,7 +378,7 @@ void try_transmit(message_t message) {
  * RAW: do nothing
  */
 void handle_message(message_t *incoming) {
-  //new msg notification
+  // new msg notification
   new_Messages[message_history_head] = 1;
   new_Msg++;
   printf("message received from %s", uid_to_string(incoming->src));
@@ -388,9 +395,19 @@ void handle_message(message_t *incoming) {
     }
   } else if (incoming->mtype == MTYPE_PING) {
     printf("rx: ping\n");
-    try_transmit(new_pong_message(incoming->src));
+    message_t pong = new_pong_message(incoming->src);
+    pong.time = get_absolute_time();
+    try_transmit(pong);
   } else if (incoming->mtype == MTYPE_PONG) {
-    printf("rx: pong\n");
+    // Calculate the time it took since we transmitted the ping message.
+    absolute_time_t delta = absolute_time_diff_us(PING_TIME, get_absolute_time());
+    // Remove processing time of the other node.
+    delta -= incoming->time;
+    // Divide by two for round-trip.
+    delta /= 2;
+    // Subtract the amount of time it takes for us to transmit.
+    delta -= last_tx_delta;
+    printf("rx: pong: %llu us\n", delta);
   } else if (incoming->mtype == MTYPE_TEXT) {
     printf("rx: text: %s\n", TEXT_MESSAGE_STR[incoming->data[0]]);
   } else if (incoming->mtype == MTYPE_REQ) {

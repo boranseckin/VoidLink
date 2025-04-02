@@ -1,4 +1,3 @@
-#include <pico/rand.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -7,7 +6,9 @@
 #include "hardware/timer.h"
 #include "hardware/uart.h"
 #include "pico/multicore.h"
+#include "pico/rand.h"
 #include "pico/time.h"
+#include "pico/types.h"
 #include "pico/util/queue.h"
 
 #include "class/cdc/cdc_device.h"
@@ -24,6 +25,9 @@
 #include "screen.h"
 #include "utils.h"
 #include "voidlink.h"
+
+absolute_time_t last_tx_start;
+absolute_time_t last_tx_delta;
 
 // Debug flag to stop processing of received messages.
 bool STOP_PROCESSING = false;
@@ -48,6 +52,7 @@ static console_t console = CONSOLE_IDLE;
 
 static sx126x_hal_context_t context;
 static sx126x_mod_params_lora_t mod_params;
+static sx126x_pkt_params_lora_t packet_params;
 static mod_params_t mod_params_local;
 
 void set_range(mod_params_t param) {
@@ -68,10 +73,18 @@ void set_range(mod_params_t param) {
 
   sx126x_set_lora_mod_params(&context, &mod_params);
 
-  debug("modulation parameters set to %s\n", MOD_PARAM_STR[param]);
+  debug("modulation parameters set to %s (ToA: %u ms)\n", MOD_PARAM_STR[param],
+        get_time_on_air_in_ms());
+}
+
+uint32_t get_time_on_air_in_ms() {
+  return sx126x_get_lora_time_on_air_in_ms(&packet_params, &mod_params);
 }
 
 void handle_tx_callback() {
+  last_tx_delta = absolute_time_diff_us(last_tx_start, get_absolute_time());
+  debug("last tx took %llu us\n", last_tx_delta);
+
   sx126x_chip_status_t status = {.chip_mode = 0, .cmd_status = 0};
   sx126x_get_status(&context, &status);
   if (status.cmd_status != SX126X_CMD_STATUS_CMD_TX_DONE) {
@@ -338,13 +351,12 @@ void setup_sx126x() {
   sx126x_set_lora_mod_params(&context, &mod_params);
 
   // Setup the packet parameters for LORA.
-  sx126x_pkt_params_lora_t packet_params = {
-      .preamble_len_in_symb = 0x10,
-      .header_type = SX126X_LORA_PKT_IMPLICIT,
-      .pld_len_in_bytes = sizeof(message_t),
-      .crc_is_on = true,
-      .invert_iq_is_on = false,
-  };
+  packet_params.preamble_len_in_symb = 0x10;
+  packet_params.header_type = SX126X_LORA_PKT_IMPLICIT;
+  packet_params.pld_len_in_bytes = sizeof(message_t);
+  packet_params.crc_is_on = true;
+  packet_params.invert_iq_is_on = false;
+
   sx126x_set_lora_pkt_params(&context, &packet_params);
 
   // Setup the DIO1 pin to trigger for all interrupts.
@@ -389,6 +401,8 @@ void transmit_bytes(uint8_t *bytes, uint8_t length) {
 
   debug("tx: %d bytes\n", length);
 
+  last_tx_start = get_absolute_time();
+
   // Start the transmission.
   sx126x_set_tx(&context, 0x0);
 
@@ -416,6 +430,14 @@ void transmit_packet(message_t *packet) {
 
   debug("sleeping for %d ms\n", timeout);
   sleep_ms(timeout);
+
+  if (packet->mtype == MTYPE_PING) {
+    PING_TIME = get_absolute_time();
+    debug("ping time: %llu\n", PING_TIME);
+  } else if (packet->mtype == MTYPE_PONG) {
+    // Difference between when we received ping and when we are sending pong.
+    packet->time = absolute_time_diff_us(packet->time, get_absolute_time());
+  }
 
   debug("->");
   for (int i = 0; i < sizeof(message_t); i++) {
