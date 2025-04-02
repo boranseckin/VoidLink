@@ -27,6 +27,8 @@ void setup_io();
 void setup_display();
 void setup_sx126x();
 
+float read_voltage();
+
 void transmit_bytes(uint8_t *bytes, uint8_t length);
 void transmit_string(char *string);
 void transmit_packet(message_history_t *packet);

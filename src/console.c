@@ -102,6 +102,8 @@ void handle_console_input() {
       print_acks();
     } else if (strcmp(parts[1], "uptime") == 0) {
       info("uptime: %ds\n", to_ms_since_boot(get_absolute_time()) / 1000);
+    } else if (strcmp(parts[1], "voltage") == 0) {
+      info("voltage: %f V\n", read_voltage());
     } else {
       error("unknown get command\n");
     }

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "hardware/adc.h"
 #include "hardware/irq.h"
 #include "hardware/regs/intctrl.h"
 #include "hardware/timer.h"
@@ -290,6 +291,11 @@ void setup_io() {
   pico_gpio_set_interrupt(PIN_BUTTON_OK, GPIO_IRQ_EDGE_FALL, &handle_irq_callback);
   pico_gpio_set_interrupt(PIN_BUTTON_BACK, GPIO_IRQ_EDGE_FALL, &handle_irq_callback);
 
+  // Initialize ADC for battery.
+  adc_init();
+  adc_gpio_init(PIN_BATTERY_ADC);
+  adc_select_input(0);
+
   // Blink the onboard LED to signify setup is done.
   gpio_init(PIN_STATUS_LED);
   gpio_set_dir(PIN_STATUS_LED, GPIO_OUT);
@@ -384,6 +390,16 @@ void print_hello() {
          "    \\/ \\___/|_|\\__,_|______|_|_| |_|_|\\_\\ \n"
          "     version: %d.%d       %s is ready\n",
          VERSION_MAJOR, VERSION_MINOR, uid_to_string(get_uid()));
+}
+
+// Reads the ADC connected to the power rail and returns a voltage value.
+float read_voltage() {
+#ifndef PIN_CONFIG_v2
+  return 0;
+#endif
+  // 12-bit quantization with 3.3 volt as max
+  const static float conversion_factor = 3.3f / (1 << 12);
+  return adc_read() * conversion_factor;
 }
 
 // Transmit bytes over the radio.

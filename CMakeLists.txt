@@ -81,6 +81,6 @@ target_include_directories(sx126x INTERFACE
 )
 
 # Final link
-target_link_libraries(voidlink pico_stdlib pico_multicore pico_rand hardware_spi sx126x ePaper GUI Fonts Config)
+target_link_libraries(voidlink pico_stdlib pico_multicore pico_rand hardware_spi hardware_adc sx126x ePaper GUI Fonts Config)
 
 pico_add_extra_outputs(voidlink)
