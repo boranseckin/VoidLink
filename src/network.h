@@ -8,7 +8,7 @@
 
 // Bump these versions according to the changes made.
 #define VERSION_MAJOR 0
-#define VERSION_MINOR 6
+#define VERSION_MINOR 7
 // Neighbour table
 #define MAX_NEIGHBOURS 16
 // Maximum number of messages to keep in history.
@@ -117,14 +117,14 @@ extern neighbour_table_t neighbour_table;
 // Message structure.
 // On 32-bit architecture of pico, the struct needs to be aligned to 4-byte words.
 // The reserved data is for future expension.
-typedef struct {
-  uid_t dst;
-  uid_t src;
-  mid_t id;
-  mtype_t mtype;
-  flags_t flags;
-  uint64_t time;
-  uint8_t data[3];
+typedef struct __attribute__((__packed__)) {
+  uid_t dst;       // 3
+  uid_t src;       // 3 6
+  mid_t id;        // 1 7
+  mtype_t mtype;   // 1 8
+  uint64_t time;   // 8 16
+  flags_t flags;   // 1 17
+  uint8_t data[3]; // 3 20
 } message_t;
 
 typedef struct {
