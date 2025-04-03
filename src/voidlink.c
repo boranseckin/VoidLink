@@ -196,7 +196,7 @@ void handle_dio1_callback(uint gpio, uint32_t events) {
 void handle_irq_callback(uint gpio, uint32_t events) {
   if (gpio == PIN_DIO1) {
     handle_dio1_callback(gpio, events);
-  } else if (gpio == PIN_BUTTON_NEXT || gpio == PIN_BUTTON_OK || gpio == PIN_BUTTON_BACK) {
+  } else if (gpio == PIN_BUTTON_NEXT || gpio == PIN_BUTTON_OK || gpio == PIN_BUTTON_BACK || gpio == PIN_BUTTON_PREV || gpio == PIN_BUTTON_HOME || gpio == PIN_BUTTON_SLEEP) {
     handle_button_callback(gpio, events);
   }
 }
@@ -287,9 +287,15 @@ void setup_io() {
   pico_gpio_init(PIN_BUTTON_NEXT, GPIO_FUNC_SIO, GPIO_DIR_IN, GPIO_PULL_UP, 1);
   pico_gpio_init(PIN_BUTTON_OK, GPIO_FUNC_SIO, GPIO_DIR_IN, GPIO_PULL_UP, 1);
   pico_gpio_init(PIN_BUTTON_BACK, GPIO_FUNC_SIO, GPIO_DIR_IN, GPIO_PULL_UP, 1);
+  pico_gpio_init(PIN_BUTTON_PREV, GPIO_FUNC_SIO, GPIO_DIR_IN, GPIO_PULL_UP, 1);
+  pico_gpio_init(PIN_BUTTON_HOME, GPIO_FUNC_SIO, GPIO_DIR_IN, GPIO_PULL_UP, 1);
+  pico_gpio_init(PIN_BUTTON_SLEEP, GPIO_FUNC_SIO, GPIO_DIR_IN, GPIO_PULL_UP, 1);
   pico_gpio_set_interrupt(PIN_BUTTON_NEXT, GPIO_IRQ_EDGE_FALL, &handle_irq_callback);
   pico_gpio_set_interrupt(PIN_BUTTON_OK, GPIO_IRQ_EDGE_FALL, &handle_irq_callback);
   pico_gpio_set_interrupt(PIN_BUTTON_BACK, GPIO_IRQ_EDGE_FALL, &handle_irq_callback);
+  pico_gpio_set_interrupt(PIN_BUTTON_PREV, GPIO_IRQ_EDGE_FALL, &handle_irq_callback);
+  pico_gpio_set_interrupt(PIN_BUTTON_HOME, GPIO_IRQ_EDGE_FALL, &handle_irq_callback);
+  pico_gpio_set_interrupt(PIN_BUTTON_SLEEP, GPIO_IRQ_EDGE_FALL, &handle_irq_callback);
 
   // Initialize ADC for battery.
   adc_init();
@@ -325,11 +331,11 @@ void setup_sx126x() {
   // errors.
   sx126x_clear_device_errors(&context);
 #ifndef PIN_CONFIG_v2
-  // sx126x_set_dio3_as_tcxo_ctrl(&context, SX126X_TCXO_CTRL_1_7V, 5 << 6);
+  sx126x_set_dio3_as_tcxo_ctrl(&context, SX126X_TCXO_CTRL_1_7V, 5 << 6);
 
   // With the TCXO correctly configured now, re-calibrate all the clock on the chip.
-  // sx126x_cal_mask_t calibration_mask = 0x7F;
-  // sx126x_cal(&context, calibration_mask);
+  sx126x_cal_mask_t calibration_mask = 0x7F;
+  sx126x_cal(&context, calibration_mask);
 #endif
 
   // Make sure the calibration succeeded.

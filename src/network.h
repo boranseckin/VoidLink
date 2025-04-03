@@ -8,7 +8,7 @@
 
 // Bump these versions according to the changes made.
 #define VERSION_MAJOR 1
-#define VERSION_MINOR 0
+#define VERSION_MINOR 1
 // Neighbour table
 #define MAX_NEIGHBOURS 16
 // Maximum number of messages to keep in history.

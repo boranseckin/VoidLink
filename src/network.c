@@ -380,7 +380,7 @@ void handle_message(message_history_t *message) {
   int64_t rx_delta = absolute_time_diff_us(message->time, get_absolute_time());
 
   // new msg notification
-  new_Messages[message_history_head] = 1;
+  new_Messages[message_history_head-1] = 1;
   new_Msg++;
 
   printf("message received from %s", uid_to_string(incoming->src));

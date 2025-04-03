@@ -11,8 +11,8 @@
 
 void handle_button_callback(uint gpio, uint32_t events) {
   // if (screen != SCREEN_IDLE || (state != STATE_IDLE && state != STATE_RX))
-  if (screen != SCREEN_IDLE)
-    return;
+  //if (screen != SCREEN_IDLE)
+    //return;
 
   if (gpio == PIN_BUTTON_NEXT) { // add switch cases for each state
     switch (display) {
@@ -32,7 +32,11 @@ void handle_button_callback(uint gpio, uint32_t events) {
         received_Page++;
         received_Cursor = 0;
       } else {
-        received_Cursor = (received_Cursor + 1) % (message_history_count - (received_Page - 1) * 3);
+        if (neighbour_table.count == 0){
+          received_Cursor = 0;
+        } else {
+          received_Cursor = (received_Cursor + 1) % (message_history_count - (received_Page - 1) * 3);
+        }
       }
       // Display cursor
       received_Msgs();
@@ -97,6 +101,12 @@ void handle_button_callback(uint gpio, uint32_t events) {
       screen = SCREEN_DRAW_READY;
       break;
 
+    case DISPLAY_BROADCAST:
+      broadcast_Action_Cursor = (broadcast_Action_Cursor + 1) % 3;
+      broadcast();
+      screen = SCREEN_DRAW_READY;
+      break;
+
     case DISPLAY_NEIGHBOURS_ACTION:
       neighbour_Action_Cursor = (neighbour_Action_Cursor + 1) % 3;
       neighbours_Action();
@@ -132,11 +142,15 @@ void handle_button_callback(uint gpio, uint32_t events) {
     case DISPLAY_RXMSG:
       printf("On Received Messages Screen.\n"); // For testing purposes
       // Reset cursor if moving to new page
-      if (received_Cursor == 0 && received_Page >= 1) {
+      if (received_Cursor == 0 && received_Page > 1) {
         received_Page--;
         received_Cursor = 2;
       } else {
-        received_Cursor = (received_Cursor - 1 + (message_history_count - (received_Page - 1) * 3)) % (message_history_count - (received_Page - 1) * 3);
+        if (neighbour_table.count == 0){
+          received_Cursor = 0;
+        } else {
+          received_Cursor = (received_Cursor - 1 + (message_history_count - (received_Page - 1) * 3)) % (message_history_count - (received_Page - 1) * 3);
+        }
       }
       // Display cursor
       received_Msgs();
@@ -202,6 +216,12 @@ void handle_button_callback(uint gpio, uint32_t events) {
       screen = SCREEN_DRAW_READY;
       break;
 
+    case DISPLAY_BROADCAST:
+      broadcast_Action_Cursor = (broadcast_Action_Cursor - 1 + 3) % 3;
+      broadcast();
+      screen = SCREEN_DRAW_READY;
+      break;
+
     case DISPLAY_NEIGHBOURS_ACTION:
       neighbour_Action_Cursor = (neighbour_Action_Cursor - 1 + 3) % 3;
       neighbours_Action();
@@ -256,18 +276,20 @@ void handle_button_callback(uint gpio, uint32_t events) {
 
     case DISPLAY_RXMSG:
       // Add selection drawings for received messages screen
-      received_msg_Details();
-      display = DISPLAY_RXMSG_DETAILS;
-      msg_Action_Cursor = 0;
-      refresh_Counter = 15;
-      screen = SCREEN_DRAW_READY;
+      if (neighbour_table.count == 0){
+        received_msg_Details();
+        display = DISPLAY_RXMSG_DETAILS;
+        msg_Action_Cursor = 0;
+        refresh_Counter = 15;
+        screen = SCREEN_DRAW_READY;
+      }
       break;
 
     case DISPLAY_RXMSG_DETAILS:
       if (msg_Action_Cursor == 0) {
-        // Reply to message
+        // Text Reply to message
         display = DISPLAY_MSG;
-        msg_Screen(); // Needs to change, needs to get to node actions screen.
+        msg_Screen();
         refresh_Counter = 15;
         screen = SCREEN_DRAW_READY;
       }
@@ -376,6 +398,33 @@ void handle_button_callback(uint gpio, uint32_t events) {
       }
       break;
 
+    case DISPLAY_BROADCAST:
+      if (broadcast_Action_Cursor == 0) {
+        // Send a text msg
+        printf("text.\n");
+        msg_Screen();
+        display = DISPLAY_MSG;
+        refresh_Counter = 15;
+        screen = SCREEN_DRAW_READY;
+      } else if (broadcast_Action_Cursor == 1) {
+        // Send Ping message
+        printf("ping.\n");
+        //try_transmit(new_ping_message(neighbour_table.neighbours[neighbour_Table_Cursor + ((neighbour_received_Page - 1) * 3)].uid));
+        msg_Type = 2;
+        send_To_Screen();
+        display = DISPLAY_SEND_TO;
+        refresh_Counter = 15;
+        screen = SCREEN_DRAW_READY;
+      } else if (broadcast_Action_Cursor == 2) {
+        // Send Request message
+        printf("request.\n");
+        neighbours_Request();
+        display = DISPLAY_NEIGHBOURS_REQUEST;
+        refresh_Counter = 15;
+        screen = SCREEN_DRAW_READY;
+      }
+      break;
+
     case DISPLAY_NEIGHBOURS_ACTION:
       if (neighbour_Action_Cursor == 0) {
         // Send a text msg
@@ -424,8 +473,8 @@ void handle_button_callback(uint gpio, uint32_t events) {
      // Go to msg screen
       if (neighbour_Cursor == 1) {
         // Broadcast
-        display = DISPLAY_MSG;
-        msg_Screen();
+        display = DISPLAY_BROADCAST;
+        broadcast();
         refresh_Counter = 15;
         screen = SCREEN_DRAW_READY;
       }
@@ -507,6 +556,14 @@ void handle_button_callback(uint gpio, uint32_t events) {
       break;
 
     case DISPLAY_NEIGHBOURS_TABLE:
+      display = DISPLAY_NEIGHBOURS;
+      neighbour_received_Page = 1;
+      neighbours_Screen();
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_BROADCAST:
       display = DISPLAY_NEIGHBOURS;
       neighbour_received_Page = 1;
       neighbours_Screen();
@@ -599,6 +656,14 @@ void handle_button_callback(uint gpio, uint32_t events) {
       break;
 
     case DISPLAY_NEIGHBOURS_TABLE:
+      display = DISPLAY_HOME;
+      neighbour_received_Page = 1;
+      home_Screen();
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
+      break;
+
+    case DISPLAY_BROADCAST:
       display = DISPLAY_HOME;
       neighbour_received_Page = 1;
       home_Screen();

@@ -23,6 +23,7 @@ typedef enum {
   DISPLAY_RXMSG,
   DISPLAY_RXMSG_DETAILS,
   DISPLAY_NEIGHBOURS_TABLE,
+  DISPLAY_BROADCAST,
   DISPLAY_NEIGHBOURS_ACTION,
   DISPLAY_NEIGHBOURS_REQUEST,
   DISPLAY_NEIGHBOURS,
@@ -42,6 +43,7 @@ extern uint8_t message_Cursor;
 extern uint8_t send_to_Cursor;
 extern uint8_t neighbour_Cursor;
 extern uint8_t neighbour_Table_Cursor;
+extern uint8_t broadcast_Action_Cursor;
 extern uint8_t neighbour_Action_Cursor;
 extern uint8_t neighbour_Request_Cursor;
 extern uint8_t home_Cursor;
@@ -75,6 +77,7 @@ void send_To_Screen();
 void msg_Screen();
 void received_msg_Details();
 void received_Msgs();
+void broadcast();
 void neighbours_Action();
 void neighbours_Table();
 void neighbours_Request();
@@ -82,6 +85,7 @@ void neighbours_Screen();
 void home_Screen();
 void settings_Info();
 void settings_Screen();
+void go_to_Sleep();
 
 void set_flag_and_reset_alarm();
 

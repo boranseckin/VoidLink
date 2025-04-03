@@ -4,10 +4,12 @@
 
 #include "EPD_2in13_V4.h"
 #include "GUI_Paint.h"
+#include "pico_config.h"
 
 #include "network.h"
 #include "screen.h"
 #include "utils.h"
+#include "voidlink.h"
 
 alarm_id_t alarm_id;
 
@@ -21,6 +23,7 @@ uint8_t message_Cursor = 0;
 uint8_t send_to_Cursor = 0;
 uint8_t neighbour_Cursor = 0;
 uint8_t neighbour_Table_Cursor = 0;
+uint8_t broadcast_Action_Cursor = 0;
 uint8_t neighbour_Action_Cursor = 0;
 uint8_t neighbour_Request_Cursor = 0;
 uint8_t home_Cursor = 0;
@@ -93,21 +96,23 @@ void send_To_Screen(){
                          BLACK, WHITE);
     }
   } else if (msg_Type == 2){ //msg_Type = 2 is ping message
-    Paint_DrawString(15, 35, "Who do you want to ping?", &Font16, BLACK, WHITE);
-    Paint_DrawString(5, 5, "Sending ping.", &Font16, BLACK, WHITE);
+    Paint_DrawString(20, 35, "Who do you want to ping?", &Font12, BLACK, WHITE);
+    Paint_DrawString(0, 5, "Sending ping.", &Font16, BLACK, WHITE);
   }
-  Paint_DrawString(180, 70, ">", &Font16, BLACK, WHITE);
-  Paint_DrawString(20, 70, "<", &Font16, BLACK, WHITE);
+  if (neighbour_table.count>0){
+    Paint_DrawString(190, 70, ">", &Font16, BLACK, WHITE);
+    Paint_DrawString(20, 70, "<", &Font16, BLACK, WHITE);
+  }
   char *src;
 
   if (send_to_Cursor == 0) {
-    Paint_DrawString(55, 70, "Broadcast to all", &Font16, WHITE, BLACK);
+    Paint_DrawString(45, 70, "Broadcast to all", &Font16, WHITE, BLACK);
   } else {
     neighbour_t *neighbour_Node = &neighbour_table.neighbours[send_to_Cursor - 1];
     src = uid_to_string(neighbour_Node->uid);
-    Paint_DrawString(55, 70, src, &Font16, BLACK, WHITE);
+    Paint_DrawString(45, 70, src, &Font16, BLACK, WHITE);
   }
-  Paint_DrawString(5, 85, "Press the OK/Confirm button to transmit.", &Font12, BLACK, WHITE);
+  Paint_DrawString(10, 105, "Press the OK button to transmit.", &Font12, BLACK, WHITE);
 }
 
 void msg_Screen() {
@@ -182,11 +187,11 @@ void received_msg_Details() {
   Paint_DrawString(170, 75, buff, &Font12, BLACK, WHITE); // replace with new_String
 
   if (msg_Action_Cursor == 0) {
-    Paint_DrawString(20, 100, "Reply", &Font16, WHITE, BLACK);
-    Paint_DrawString(150, 100, "Neighbours", &Font16, BLACK, WHITE);
+    Paint_DrawString(15, 100, "Text Reply", &Font16, WHITE, BLACK);
+    Paint_DrawString(130, 100, "Neighbours", &Font16, BLACK, WHITE);
   } else if (msg_Action_Cursor == 1) {
-    Paint_DrawString(20, 100, "Reply", &Font16, BLACK, WHITE);
-    Paint_DrawString(150, 100, "Neighbours", &Font16, WHITE, BLACK);
+    Paint_DrawString(15, 100, "Text Reply", &Font16, BLACK, WHITE);
+    Paint_DrawString(130, 100, "Neighbours", &Font16, WHITE, BLACK);
   }
 }
 
@@ -240,7 +245,6 @@ void received_Msgs() {
     // Remove new message indicator if it was seen
     if (new_Messages[i + ((received_Page - 1) * 3)] == 1) {
       Paint_DrawString(150, 34 + i * 24, "*NEW*", &Font16, BLACK, WHITE);
-      //printf("New Message: %s\n",saved_Messages[i + ((received_Page - 1) * 3)]);
       if (received_Cursor == i) {
         new_Msg--;
         new_Messages[i + ((received_Page - 1) * 3)] = 0;
@@ -249,7 +253,9 @@ void received_Msgs() {
     for (int i = 0; i < 3; i++) {
       Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
     }
-    Paint_DrawString(0, 34 + received_Cursor * 24, ">", &Font16, BLACK, WHITE);
+    if (neighbour_table.count > 0){
+      Paint_DrawString(0, 34 + received_Cursor * 24, ">", &Font16, BLACK, WHITE);
+    }
   }
   if (message_history_count == 0) {
     Paint_DrawString(0, 34, "No messages received.", &Font16, BLACK, WHITE);
@@ -263,6 +269,34 @@ void received_Msgs() {
   }
 }
 
+void broadcast() {
+  // Create a new display buffer
+  //Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  Paint_SelectImage(image);
+  // Paint the whole frame white
+  Paint_Clear(WHITE);
+  // Draw message selection screen
+  Paint_DrawString(0, 0, "Select action to broadcast:", &Font12, BLACK, WHITE);
+  Paint_DrawString(0, 40, "You will broadcast to all neighbours within range.", &Font12, BLACK, WHITE);
+  char buffer[64];
+  sprintf(buffer, "Current known neighbours: %d.",neighbour_table.count);
+  Paint_DrawString(0, 60, buffer, &Font12, BLACK, WHITE);
+
+  if (broadcast_Action_Cursor == 0) {
+    Paint_DrawString(5, 100, "Text", &Font16, WHITE, BLACK);
+    Paint_DrawString(85, 100, "Ping", &Font16, BLACK, WHITE);
+    Paint_DrawString(165, 100, "Request", &Font16, BLACK, WHITE);
+  } else if (broadcast_Action_Cursor == 1) {
+    Paint_DrawString(5, 100, "Text", &Font16, BLACK, WHITE);
+    Paint_DrawString(85, 100, "Ping", &Font16, WHITE, BLACK);
+    Paint_DrawString(165, 100, "Request", &Font16, BLACK, WHITE);
+  } else if (broadcast_Action_Cursor == 2) {
+    Paint_DrawString(5, 100, "Text", &Font16, BLACK, WHITE);
+    Paint_DrawString(85, 100, "Ping", &Font16, BLACK, WHITE);
+    Paint_DrawString(165, 100, "Request", &Font16, WHITE, BLACK);
+  }
+}
+
 void neighbours_Action() {
   printf("ACTION.\n");
   // Create a new display buffer
@@ -272,48 +306,51 @@ void neighbours_Action() {
   Paint_Clear(WHITE);
   // Draw message selection screen
   Paint_DrawString(0, 0, "Neighbour Details:", &Font16, BLACK, WHITE);
-  printf("%d\n",neighbour_Table_Cursor + ((neighbour_received_Page - 1) * 3));
-  neighbour_t *neighbour_Node_Action = &neighbour_table.neighbours[neighbour_Table_Cursor + ((neighbour_received_Page - 1) * 3)];
-  char *src = uid_to_string(neighbour_Node_Action->uid);
-  //Paint_DrawString(0, 25, src, &Font16,BLACK, WHITE);
-  char buffer[64];
-  sprintf(buffer, "Neighbour: %s",src);
-  Paint_DrawString(0, 25, buffer, &Font16, BLACK, WHITE);
- // Update last seen and change units based on time
-  int time_diff = absolute_time_diff_us(neighbour_Node_Action->last_seen,get_absolute_time())/1000/1000;
-  if (time_diff > 60) {
-    time_diff = time_diff / 60;
-    sprintf(buffer, "Last Seen: %dm",time_diff);
-  } else if (time_diff > 60 * 60) {
-    time_diff = (float)time_diff / 60 / 60;
-    sprintf(buffer, "Last Seen: %dh",time_diff);
-  }else {
-    sprintf(buffer, "Last Seen: %ds",time_diff);
+  if (neighbour_table.count == 0){
+    Paint_DrawString(0, 25, "No Neighbours Found.  Selected Action will broadcast.", &Font16, BLACK, WHITE);
+  } else{
+    printf("%d\n",neighbour_Table_Cursor + ((neighbour_received_Page - 1) * 3));
+    neighbour_t *neighbour_Node_Action = &neighbour_table.neighbours[neighbour_Table_Cursor + ((neighbour_received_Page - 1) * 3)];
+    char *src = uid_to_string(neighbour_Node_Action->uid);
+    //Paint_DrawString(0, 25, src, &Font16,BLACK, WHITE);
+    char buffer[64];
+    sprintf(buffer, "Neighbour: %s",src);
+    Paint_DrawString(0, 25, buffer, &Font16, BLACK, WHITE);
+  // Update last seen and change units based on time
+    int time_diff = absolute_time_diff_us(neighbour_Node_Action->last_seen,get_absolute_time())/1000/1000;
+    if (time_diff > 60) {
+      time_diff = time_diff / 60;
+      sprintf(buffer, "Last Seen: %dm",time_diff);
+    } else if (time_diff > 60 * 60) {
+      time_diff = (float)time_diff / 60 / 60;
+      sprintf(buffer, "Last Seen: %dh",time_diff);
+    }else {
+      sprintf(buffer, "Last Seen: %ds",time_diff);
+    }
+    Paint_DrawString(0, 55, buffer, &Font12, BLACK, WHITE);
+
+    if (neighbour_Node_Action->version_major == 0 && neighbour_Node_Action->version_minor == 0){
+      sprintf(buffer, "Version: Unk");
+    } else {
+      sprintf(buffer, "Version: %d.%d",neighbour_Node_Action->version_major,neighbour_Node_Action->version_minor);
+    }
+    Paint_DrawString(165, 55, buffer, &Font12, BLACK, WHITE);
+
+    sprintf(buffer, "RSSI: %d",neighbour_Node_Action->rssi);
+    Paint_DrawString(0, 75, buffer, &Font12, BLACK, WHITE);
   }
-  Paint_DrawString(0, 55, buffer, &Font12, BLACK, WHITE);
-
-  if (neighbour_Node_Action->version_major == 0 && neighbour_Node_Action->version_minor == 0){
-    sprintf(buffer, "Version: Unk");
-  } else {
-    sprintf(buffer, "Version: %d.%d",neighbour_Node_Action->version_major,neighbour_Node_Action->version_minor);
-  }
-  Paint_DrawString(165, 55, buffer, &Font12, BLACK, WHITE);
-
-  sprintf(buffer, "RSSI: %d",neighbour_Node_Action->rssi);
-  Paint_DrawString(0, 75, buffer, &Font12, BLACK, WHITE);
-
   if (neighbour_Action_Cursor == 0) {
     Paint_DrawString(5, 100, "Text", &Font16, WHITE, BLACK);
-    Paint_DrawString(55, 100, "Ping", &Font16, BLACK, WHITE);
-    Paint_DrawString(105, 100, "Request", &Font16, BLACK, WHITE);
+    Paint_DrawString(85, 100, "Ping", &Font16, BLACK, WHITE);
+    Paint_DrawString(165, 100, "Request", &Font16, BLACK, WHITE);
   } else if (neighbour_Action_Cursor == 1) {
     Paint_DrawString(5, 100, "Text", &Font16, BLACK, WHITE);
-    Paint_DrawString(55, 100, "Ping", &Font16, WHITE, BLACK);
-    Paint_DrawString(105, 100, "Request", &Font16, BLACK, WHITE);
+    Paint_DrawString(85, 100, "Ping", &Font16, WHITE, BLACK);
+    Paint_DrawString(165, 100, "Request", &Font16, BLACK, WHITE);
   } else if (neighbour_Action_Cursor == 2) {
     Paint_DrawString(5, 100, "Text", &Font16, BLACK, WHITE);
-    Paint_DrawString(55, 100, "Ping", &Font16, BLACK, WHITE);
-    Paint_DrawString(105, 100, "Request", &Font16, WHITE, BLACK);
+    Paint_DrawString(85, 100, "Ping", &Font16, BLACK, WHITE);
+    Paint_DrawString(165, 100, "Request", &Font16, WHITE, BLACK);
   }
 }
 
@@ -463,19 +500,33 @@ void home_Screen() {
     }
     Paint_DrawNum(90, 110, new_Msg, &Font12, WHITE, BLACK);
   }
+  #ifdef PIN_CONFIG_v2
+  // Draw Battery %
+  char bat[12];
+  sprintf(bat, "%.1f%%", (read_voltage())/3.3*100);
+  Paint_DrawString(185, 0, bat, &Font12, BLACK, WHITE);
+  #endif
+
+  #ifndef PIN_CONFIG_v2
+  // Draw Battery %
+  Paint_DrawString(185, 0, "100%%", &Font12, BLACK, WHITE);
+  #endif
+  Paint_DrawRectangle(182, 0, 230, 15, BLACK, DOT_PIXEL_1X1, DRAW_FILL_EMPTY);
 
   // Draw version number
   char version[12];
-  char neighbour_Count[2];
+  char neighbour_Count[64];
   sprintf(version, "V/ink v%d.%d", VERSION_MAJOR, VERSION_MINOR);
   Paint_DrawString(0, 0, version, &Font12, BLACK, WHITE);
+  Paint_DrawRectangle(0, 0, 75, 15, BLACK, DOT_PIXEL_1X1, DRAW_FILL_EMPTY);
 
   // Draw nearby nodes, replace with network code
-  Paint_DrawString(125, 0, "Nearby Nodes", &Font12, BLACK, WHITE);
+  //Paint_DrawString(90, 0, "Nearby Nodes", &Font12, BLACK, WHITE);
   // convert neighbour_table.count to string
-  sprintf(neighbour_Count, "%d", neighbour_table.count);
-  Paint_DrawString(110, 0, neighbour_Count, &Font12, BLACK, WHITE);
+  sprintf(neighbour_Count, "%d Nearby Nodes", neighbour_table.count);
+  Paint_DrawString(80, 0, neighbour_Count, &Font12, BLACK, WHITE);
   //printf("Found Nodes: %d\n",neighbour_table.count);
+  Paint_DrawRectangle(75, 0, 182, 15, BLACK, DOT_PIXEL_1X1, DRAW_FILL_EMPTY);
 }
 
 void settings_Info() {
