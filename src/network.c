@@ -430,6 +430,8 @@ void handle_message(message_history_t *message) {
       uint32_t time_in_sec = to_ms_since_boot(get_absolute_time()) / 1000;
       // Only send the lower 16 bits to save space.
       try_transmit(new_response_message(incoming->src, INFO_UPTIME, time_in_sec & 0xFFFF));
+    } else if (incoming->data[0] == INFO_BATTERY) {
+      try_transmit(new_response_message(incoming->src, INFO_BATTERY, read_voltage()));
     } else {
       try_transmit(new_response_message(incoming->src, incoming->data[0], 0));
     }
@@ -440,6 +442,8 @@ void handle_message(message_history_t *message) {
       update_neighbour(incoming->src, 0, (incoming->data[1] << 8) | incoming->data[2]);
     } else if (incoming->data[0] == INFO_UPTIME) {
       printf("uptime: %d\n", (incoming->data[1] << 8) | incoming->data[2]);
+    } else if (incoming->data[0] == INFO_BATTERY) {
+      printf("battery: %f\n", (float)((incoming->data[1] << 8) | incoming->data[2]));
     }
   } else if (incoming->mtype == MTYPE_RAW) {
     printf("rx: raw: %d %d %d\n", incoming->data[0], incoming->data[1], incoming->data[2]);
