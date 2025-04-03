@@ -85,7 +85,7 @@ mid_t get_mid() {
 // Compare two messages.
 // Returns true if they are the same.
 bool compare_messages(message_t *a, message_t *b) {
-  return memcmp(&(a->src), &(b->src), sizeof(uid_t)) && a->id == b->id;
+  return memcmp(&(a->src), &(b->src), sizeof(uid_t)) == 0 && a->id == b->id;
 }
 
 // Forms a new ack message.
