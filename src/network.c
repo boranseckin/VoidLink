@@ -393,9 +393,6 @@ void handle_message(message_history_t *message) {
     remove_ack(mid);
   } else if (incoming->mtype == MTYPE_HELLO) {
     printf("rx: hello\n");
-    if (incoming->flags.ack_req) {
-      try_transmit(new_ack_message(incoming->src, incoming->id));
-    }
   } else if (incoming->mtype == MTYPE_PING) {
     printf("rx: ping: %llu\n", incoming->time);
     message_t pong = new_pong_message(incoming->src);

@@ -538,6 +538,11 @@ int main() {
       // If the message is already received, ignore it.
       if (!check_message_history(message.message)) {
         handle_message(&message);
+
+        if (message.message.flags.ack_req) {
+          debug("sending ack\n");
+          try_transmit(new_ack_message(message.message.src, message.message.id));
+        }
       }
     }
 
