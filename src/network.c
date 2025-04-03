@@ -95,7 +95,7 @@ message_t new_ack_message(uid_t dst, mid_t mid) {
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_ACK,
-      .flags = {.ack_req = false, .hop_limit = 0},
+      .flags = {.ack_req = false, .hop_limit = 3},
       .data = {mid, 0x00, 0x00},
   };
   return msg;
@@ -108,7 +108,7 @@ message_t new_hello_message() {
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_HELLO,
-      .flags = {.ack_req = false, .hop_limit = 0},
+      .flags = {.ack_req = true, .hop_limit = 0},
       .data = {0x00, 0x00, 0x00},
   };
   return msg;
@@ -149,7 +149,7 @@ message_t new_text_message(uid_t dst, text_id_t id) {
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_TEXT,
-      .flags = {.ack_req = false, .hop_limit = 3},
+      .flags = {.ack_req = true, .hop_limit = 3},
       .data = {id, 0x00, 0x00},
   };
   return msg;
