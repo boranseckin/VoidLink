@@ -149,7 +149,7 @@ message_t new_text_message(uid_t dst, text_id_t id) {
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_TEXT,
-      .flags = {.ack_req = false, .hop_limit = 0},
+      .flags = {.ack_req = false, .hop_limit = 3},
       .data = {id, 0x00, 0x00},
   };
   return msg;
@@ -162,7 +162,7 @@ message_t new_request_message(uid_t dst, info_key_t key) {
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_REQ,
-      .flags = {.ack_req = false, .hop_limit = 0},
+      .flags = {.ack_req = false, .hop_limit = 3},
       .data = {key, 0x00, 0x00},
   };
   return msg;
@@ -175,7 +175,7 @@ message_t new_response_message(uid_t dst, info_key_t key, uint16_t value) {
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_RES,
-      .flags = {.ack_req = false, .hop_limit = 0},
+      .flags = {.ack_req = false, .hop_limit = 3},
       .data = {key, (value >> 8) & 0xFF, (value & 0xFF)},
   };
   return msg;
@@ -188,7 +188,7 @@ message_t new_raw_message(uid_t dst, uint8_t *data[3]) {
       .src = get_uid(),
       .id = get_mid(),
       .mtype = MTYPE_RAW,
-      .flags = {.ack_req = false, .hop_limit = 0},
+      .flags = {.ack_req = false, .hop_limit = 3},
   };
   memcpy(msg.data, data, 3);
   return msg;
