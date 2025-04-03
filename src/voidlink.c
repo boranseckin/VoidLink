@@ -530,6 +530,8 @@ int main() {
 
   print_hello();
 
+  try_transmit(new_hello_message());
+
   while (true) {
     // Process one previously received message.
     if (!STOP_PROCESSING && queue_try_remove(&rx_queue, &message)) {
