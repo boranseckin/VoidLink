@@ -7,8 +7,8 @@
 #include "pico/util/queue.h"
 
 // Bump these versions according to the changes made.
-#define VERSION_MAJOR 0
-#define VERSION_MINOR 7
+#define VERSION_MAJOR 1
+#define VERSION_MINOR 0
 // Neighbour table
 #define MAX_NEIGHBOURS 16
 // Maximum number of messages to keep in history.
