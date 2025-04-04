@@ -19,7 +19,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
     case DISPLAY_HOME:
       printf("On Home Screen.\n"); // For testing purposes
       // Add selection drawings for home screen
-      home_Cursor = (home_Cursor + 1) % 3;
+      home_Cursor = (home_Cursor - 1 + 3) % 3;
       home_Screen();
       printf("new msgs: %d\n", new_Msg); // For testing purposes
       screen = SCREEN_DRAW_READY;
@@ -133,7 +133,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
     case DISPLAY_HOME:
       printf("On Home Screen.\n"); // For testing purposes
       // Add selection drawings for home screen
-      home_Cursor = (home_Cursor - 1 + 3) % 3;
+      home_Cursor = (home_Cursor + 1) % 3;
       home_Screen();
       printf("new msgs: %d\n", new_Msg); // For testing purposes
       screen = SCREEN_DRAW_READY;
