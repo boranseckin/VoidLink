@@ -54,7 +54,7 @@ static console_t console = CONSOLE_IDLE;
 static sx126x_hal_context_t context;
 static sx126x_mod_params_lora_t mod_params;
 static sx126x_pkt_params_lora_t packet_params;
-static mod_params_t mod_params_local;
+static mod_params_t mod_params_local = DEFAULT;
 
 void set_range(mod_params_t param) {
   switch (param) {
@@ -196,7 +196,8 @@ void handle_dio1_callback(uint gpio, uint32_t events) {
 void handle_irq_callback(uint gpio, uint32_t events) {
   if (gpio == PIN_DIO1) {
     handle_dio1_callback(gpio, events);
-  } else if (gpio == PIN_BUTTON_NEXT || gpio == PIN_BUTTON_OK || gpio == PIN_BUTTON_BACK || gpio == PIN_BUTTON_PREV || gpio == PIN_BUTTON_HOME || gpio == PIN_BUTTON_SLEEP) {
+  } else if (gpio == PIN_BUTTON_NEXT || gpio == PIN_BUTTON_OK || gpio == PIN_BUTTON_BACK ||
+             gpio == PIN_BUTTON_PREV || gpio == PIN_BUTTON_HOME || gpio == PIN_BUTTON_SLEEP) {
     handle_button_callback(gpio, events);
   }
 }
