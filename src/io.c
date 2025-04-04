@@ -276,7 +276,7 @@ void handle_button_callback(uint gpio, uint32_t events) {
 
     case DISPLAY_RXMSG:
       // Add selection drawings for received messages screen
-      if (neighbour_table.count == 0){
+      if (neighbour_table.count > 0){
         received_msg_Details();
         display = DISPLAY_RXMSG_DETAILS;
         msg_Action_Cursor = 0;
