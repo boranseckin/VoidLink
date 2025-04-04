@@ -635,6 +635,11 @@ void screen_draw_loop() {
     uint32_t flag = multicore_fifo_pop_blocking();
 
     printf("five_Seconds: %d\n", five_Seconds);
+    if (new_Msg>0){
+      gpio_put(PIN_STATUS_LED,0);
+    } else {
+      gpio_put(PIN_STATUS_LED,1);
+    }
 
     if (flag == 0) {
       // Fast refresh on display wakup
