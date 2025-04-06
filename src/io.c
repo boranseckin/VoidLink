@@ -173,12 +173,16 @@ void handle_button_callback(uint gpio, uint32_t events) {
       // printf("On Message Screen.\n"); // For testing purposes
       // message_Cursor = (message_Cursor + 1) % 3;
       // Reset cursor if moving to new page
-      if (message_Cursor == 0 && msg_received_Page >= 1) {
+      if (message_Cursor == 0 && msg_received_Page > 1) {
         msg_received_Page--;
         message_Cursor = 2;
       } else {
-        message_Cursor = (message_Cursor - 1 + (MAX_MSG_SEND - (msg_received_Page - 1) * 3)) % (MAX_MSG_SEND - (msg_received_Page - 1) * 3);
-      }
+        if (message_Cursor == 0 && msg_received_Page == 1) {
+          message_Cursor = (message_Cursor - 1 + 3) % 3;
+        } else{
+          message_Cursor = (message_Cursor - 1 + (MAX_MSG_SEND - (msg_received_Page - 1) * 3)) % (MAX_MSG_SEND - (msg_received_Page - 1) * 3);
+        }
+    }
       // Display cursor
       msg_Screen();
       screen = SCREEN_DRAW_READY;
@@ -325,7 +329,10 @@ void handle_button_callback(uint gpio, uint32_t events) {
         try_transmit(new_ping_message(dst));
       }
       // Possibly add animation to show message is being sent
-
+      send_Animation();
+      send_To_Screen();
+      refresh_Counter = 15;
+      screen = SCREEN_DRAW_READY;
       break;
 
     case DISPLAY_MSG:

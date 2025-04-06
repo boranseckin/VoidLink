@@ -72,6 +72,39 @@ void wakeup_Screen() {
   EPD_2in13_V4_Display_Fast(wakeup);
   busy_wait_ms(200);
 }
+// Provide user feedback that their message is being sent
+void send_Animation() {
+  cancel_alarm(alarm_id);
+  // Reset flag and start a new alarm
+  five_Seconds = false;
+  // Create a new display buffer
+  Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
+  // Paint the whole frame white
+  Paint_Clear(WHITE);
+
+  // Draw message selection screen
+  Paint_DrawString(20, 50, "Transmitting", &Font20, BLACK, WHITE);
+  EPD_2in13_V4_Display_Partial(image);
+  Paint_Clear(WHITE);
+  busy_wait_ms(200);
+  Paint_DrawString(20, 50, "Transmitting .", &Font20, BLACK, WHITE);
+  EPD_2in13_V4_Display_Partial(image);
+  Paint_Clear(WHITE);
+  busy_wait_ms(200);
+  Paint_DrawString(20, 50, "Transmitting ..", &Font20, BLACK, WHITE);
+  EPD_2in13_V4_Display_Partial(image);
+  Paint_Clear(WHITE);
+  busy_wait_ms(200);
+  Paint_DrawString(20, 50, "Transmitting ...", &Font20, BLACK, WHITE);
+  EPD_2in13_V4_Display_Partial(image);
+  Paint_Clear(WHITE);
+  busy_wait_ms(200);
+  Paint_DrawString(90, 50, "Sent!", &Font24, BLACK, WHITE);
+  EPD_2in13_V4_Display_Base(image);
+  busy_wait_ms(200);
+  alarm_id = add_alarm_in_ms(display_Timeout, alarm_callback, NULL, false);
+}
+
 // Who will you send to?
 void send_To_Screen(){
   // Create a new display buffer
@@ -81,23 +114,23 @@ void send_To_Screen(){
 
   // Draw message selection screen
   if (msg_Type == 0){ //msg_Type = 0 is text message
-    Paint_DrawString(15, 35, "Who to send to?", &Font16, BLACK, WHITE);
-    Paint_DrawString(5, 5, "Sending Message:", &Font16, BLACK, WHITE);
-    Paint_DrawString(180, 5, send_Message[send_to_Cursor + ((msg_received_Page - 1) * 3)], &Font16,
+    Paint_DrawString(45, 35, "Who to send to?", &Font16, BLACK, WHITE);
+    Paint_DrawString(0, 5, "Sending Message:", &Font12, BLACK, WHITE);
+    Paint_DrawString(115, 5, send_Message[message_Cursor + ((msg_received_Page - 1) * 3)], &Font16,
                          BLACK, WHITE);
   } else if (msg_Type == 1){ //msg_Type = 1 is request message
     Paint_DrawString(15, 35, "Who to request from?", &Font16, BLACK, WHITE);
-    Paint_DrawString(0, 5, "Requesting Info:", &Font16, BLACK, WHITE);
+    Paint_DrawString(0, 5, "Requesting Info:", &Font12, BLACK, WHITE);
     if (neighbour_Request_Cursor == 0) {
-      Paint_DrawString(180, 5, "Version", &Font16,
+      Paint_DrawString(120, 5, "Version", &Font16,
                          BLACK, WHITE);
     } else if (neighbour_Request_Cursor == 1) {
-      Paint_DrawString(180, 5, "Uptime", &Font16,
+      Paint_DrawString(120, 5, "Uptime", &Font16,
                          BLACK, WHITE);
     }
   } else if (msg_Type == 2){ //msg_Type = 2 is ping message
-    Paint_DrawString(20, 35, "Who do you want to ping?", &Font12, BLACK, WHITE);
-    Paint_DrawString(0, 5, "Sending ping.", &Font16, BLACK, WHITE);
+    Paint_DrawString(40, 35, "Who do you want to ping?", &Font12, BLACK, WHITE);
+    Paint_DrawString(60, 5, "Sending ping.", &Font16, BLACK, WHITE);
   }
   if (neighbour_table.count>0){
     Paint_DrawString(190, 70, ">", &Font16, BLACK, WHITE);
@@ -120,12 +153,13 @@ void msg_Screen() {
   Paint_NewImage(image, EPD_2in13_V4_WIDTH, EPD_2in13_V4_HEIGHT, 90, WHITE);
   // Paint the whole frame white
   Paint_Clear(WHITE);
+  Paint_DrawString(0, 0, "Select a Text Message:", &Font16, BLACK, WHITE);
 
   // Draw message selection screen
   for (int i = 0; i < 3; i++) {
     // Display messages, sender and time received
     if (i + ((msg_received_Page - 1) * 3) < MAX_MSG_SEND) {
-      Paint_DrawString(20, 34 + i * 24, send_Message[i + ((msg_received_Page - 1) * 3)], &Font16,
+      Paint_DrawString(40, 34 + i * 24, send_Message[i + ((msg_received_Page - 1) * 3)], &Font16,
                        BLACK, WHITE);
     }
     // Clear rest of screen if there aren't enough messages to fill it
@@ -134,16 +168,16 @@ void msg_Screen() {
       Paint_DrawRectangle(0, 34 + i * 24, 170, 47 + i * 24, WHITE, DOT_PIXEL_2X2, DRAW_FILL_FULL);
     }
     for (int i = 0; i < 3; i++) {
-      Paint_ClearWindows(0, 34 + i * 24, 20, 58 + i * 24, WHITE);
+      Paint_ClearWindows(5, 34 + i * 24, 20, 58 + i * 24, WHITE);
     }
-    Paint_DrawString(0, 34 + message_Cursor * 24, ">", &Font16, BLACK, WHITE);
+    Paint_DrawString(5, 34 + message_Cursor * 24, ">", &Font16, BLACK, WHITE);
   }
   // Display page indicators
   if (msg_received_Page > 1) {
-    Paint_DrawString(100, 30, "^", &Font12, BLACK, WHITE);
+    Paint_DrawString(130, 25, "^", &Font16, BLACK, WHITE);
   }
   if (msg_received_Page < ((float)MAX_MSG_SEND / 3)) {
-    Paint_DrawString(100, 110, "v", &Font12, BLACK, WHITE);
+    Paint_DrawString(130, 105, "v", &Font16, BLACK, WHITE);
   }
 }
 
@@ -277,10 +311,10 @@ void broadcast() {
   Paint_Clear(WHITE);
   // Draw message selection screen
   Paint_DrawString(0, 0, "Select action to broadcast:", &Font12, BLACK, WHITE);
-  Paint_DrawString(0, 40, "You will broadcast to all neighbours within range.", &Font12, BLACK, WHITE);
+  Paint_DrawString(0, 35, "You're action will broadcast to all neighbours within range.", &Font12, BLACK, WHITE);
   char buffer[64];
   sprintf(buffer, "Current known neighbours: %d.",neighbour_table.count);
-  Paint_DrawString(0, 60, buffer, &Font12, BLACK, WHITE);
+  Paint_DrawString(0, 70, buffer, &Font12, BLACK, WHITE);
 
   if (broadcast_Action_Cursor == 0) {
     Paint_DrawString(5, 100, "Text", &Font16, WHITE, BLACK);

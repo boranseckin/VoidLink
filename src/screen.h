@@ -73,6 +73,7 @@ extern uint32_t new_Msg;
 void setup_display();
 
 void wakeup_Screen();
+void send_Animation();
 void send_To_Screen();
 void msg_Screen();
 void received_msg_Details();
@@ -87,6 +88,7 @@ void settings_Info();
 void settings_Screen();
 void go_to_Sleep();
 
+int64_t alarm_callback(alarm_id_t id, void *user_data);
 void set_flag_and_reset_alarm();
 
 void screen_draw_loop();
