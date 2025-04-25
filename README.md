@@ -1,13 +1,10 @@
 # VoidLink
 
-An affordable and compact wireless communication device.
-VoidLink forms a decentralized network to relay relative position and critical information over long
-ranges with minimal power.
+A decentralized mesh communication system for off-grid environments.
+It uses LoRa to enable low-cost and portable nodes that relay messages and location data without any external infrastructure.
+VoidLink offers a self-sustaining alternative to satellite phones for adventurers, geologists, and emergency responders.
 
-Uses:
-
-- [sx126x driver](https://github.com/Lora-net/sx126x_driver/) from Semtech (ported for raspberry pi pico)
-- [Pico_ePaper_Code](https://github.com/waveshareteam/Pico_ePaper_Code) from Waveshare
+Read more about it in the [blog post](https://www.boranseckin.com/projects/voidlink).
 
 ## Usage
 
@@ -36,35 +33,6 @@ make
 picotool load voidlink.uf2
 ```
 
-## Pinout
-
-The default pinout diagram between sx126x, eink display, buttons and pico.
-
-| T/X  | uC            | uC                  | T/X    |
-| ---- | ------------- | ------------------- | ------ |
-| GND  | GND (38)      |                     | ANT    |
-| GND  | GND (38)      | GND (38)            | GND    |
-| RXEN |               | GP17 (22)           | CS/NSS |
-| TXEN |               | GP18(SPI0 SCK) (24) | CLK    |
-| DIO2 |               | GP19(SPI0 TX) (25)  | MOSI   |
-| DIO1 | GP22 (29)     | GP16(SPI0 RX) (21)  | MISO   |
-| GND  | GND (38)      | GP20 (26)           | RESET  |
-| 3V3  | 3V3(OUT) (36) | GP21 (27)           | BUSY   |
-
-| eInk | uC                 |
-| ---- | ------------------ |
-| VCC  | 3V3(OUT) (36)      |
-| GND  | GND                |
-| DIN  | GP11(SPI1 TX) (15) |
-| CLK  | GP10(SPI SCK) (14) |
-| CS   | GP9(SPI CS) (12)   |
-| DC   | GP8 (11)           |
-| RST  | GP12 (16)          |
-| BUSY | GP13 (17)          |
-
-| Button | uC      |
-| ------ | ------- |
-|Previous| GP6 (8) |
-| Next   | GP5 (7) |
-| Ok     | GP4 (6) |
-| Back   | GP3 (5) |
+## Uses
+- [sx126x driver](https://github.com/Lora-net/sx126x_driver/) from Semtech (ported for raspberry pi pico)
+- [Pico_ePaper_Code](https://github.com/waveshareteam/Pico_ePaper_Code) from Waveshare
